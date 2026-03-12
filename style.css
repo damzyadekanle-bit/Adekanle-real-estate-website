@@ -454,6 +454,21 @@ h2 {
     font-family: 'Poppins', sans-serif;
 }
 
+.form-status {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    min-height: 1.2rem;
+    color: var(--gray);
+}
+
+.form-status.success {
+    color: var(--success);
+}
+
+.form-status.error {
+    color: #c0392b;
+}
+
 /* Footer */
 footer {
     background: var(--primary);

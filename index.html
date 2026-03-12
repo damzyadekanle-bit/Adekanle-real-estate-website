@@ -226,29 +226,32 @@
                 
                 <div class="contact-form">
                     <h3>Schedule a Viewing</h3>
-                    <form id="contactForm">
+                   <form id="contactForm" action="https://formspree.io/f/xwvrbrgq" method="POST">
                         <div class="form-group">
-                            <input type="text" placeholder="Your Name" required>
+                             <input type="text" name="name" placeholder="Your Name" required>
                         </div>
                         <div class="form-group">
-                            <input type="email" placeholder="Your Email" required>
+                             <input type="email" name="email" placeholder="Your Email" required>
                         </div>
                         <div class="form-group">
-                            <input type="tel" placeholder="Phone Number">
+                            <input type="tel" name="phone" placeholder="Phone Number">
                         </div>
                         <div class="form-group">
-                            <select required>
+                            <select name="interest" required>
                                 <option value="" disabled selected>Interested In</option>
                                 <option>Buying</option>
                                 <option>Renting</option>
                                 <option>Selling</option>
                                 <option>Commercial</option>
+                                <option>Joint Ventures</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <textarea placeholder="Message" rows="4"></textarea>
+                            <textarea name="message" placeholder="Message" rows="4" required></textarea>
                         </div>
+                       <input type="hidden" name="source" value="Website enquiry form">
                         <button type="submit" class="btn-primary">Submit Inquiry</button>
+                       <p id="formStatus" class="form-status" aria-live="polite"></p>
                     </form>
                 </div>
             </div>

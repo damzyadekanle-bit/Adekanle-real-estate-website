@@ -51,11 +51,57 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Contact form submission
     const contactForm = document.getElementById('contactForm');
+    const formStatus = document.getElementById('formStatus');
     if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
+        contactForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            alert('Thank you for your inquiry! We will contact you within 24 hours.');
-            this.reset();
+            const endpoint = contactForm.getAttribute('action') || '';
+
+            if (endpoint.includes('YOUR_FORM_ID')) {
+                if (formStatus) {
+                    formStatus.className = 'form-status error';
+                    formStatus.textContent = 'Set your Formspree form ID in index.html before using this form.';
+                }
+                return;
+            }
+
+            const submitButton = contactForm.querySelector('button[type="submit"]');
+            const originalText = submitButton ? submitButton.textContent : '';
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Sending...';
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    body: new FormData(contactForm)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Form submission failed');
+                }
+
+                if (formStatus) {
+                    formStatus.className = 'form-status success';
+                    formStatus.textContent = 'Thanks! Your enquiry has been received. We will contact you shortly.';
+                }
+                contactForm.reset();
+            } catch (error) {
+                if (formStatus) {
+                    formStatus.className = 'form-status error';
+                    formStatus.textContent = 'Unable to send right now. Please call or email us directly.';
+                }
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
+            }
         });
     }
     

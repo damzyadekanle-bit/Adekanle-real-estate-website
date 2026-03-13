@@ -60,10 +60,10 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const endpoint = contactForm.getAttribute('action') || '';
 
-            if (endpoint.includes('YOUR_FORM_ID')) {
+            if (!endpoint.includes('formspree.io/f/')) {
                 if (formStatus) {
                     formStatus.className = 'form-status error';
-                    formStatus.textContent = 'Set your Formspree form ID in index.html before using this form.';
+                    formStatus.textContent = 'Form endpoint looks invalid. Update the form action URL in index.html.';
                 }
                 return;
             }
@@ -80,13 +80,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
-                        'Accept': 'application/json'
+                         Accept: 'application/json'
                     },
                     body: new FormData(contactForm)
                 });
 
+                 const responseBody = await response.json().catch(() => null);
+
                 if (!response.ok) {
-                    throw new Error('Form submission failed');
+                    const apiErrors = Array.isArray(responseBody?.errors)
+                        ? responseBody.errors.map(error => error.message).join(' ')
+                        : '';
+
+                    let errorMessage = apiErrors || 'Form submission failed.';
+
+                    if (/activate|verify|confirm/i.test(errorMessage)) {
+                        errorMessage += ' Please check Formspree for an activation/verification email and confirm the form.';
+                    }
+
+                    if (/domain|origin|allowed/i.test(errorMessage)) {
+                        errorMessage += ' Add your site domain in Formspree project settings.';
+                    }
+
+                    throw new Error(errorMessage);
                 }
 
                 if (formStatus) {
@@ -97,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 if (formStatus) {
                     formStatus.className = 'form-status error';
-                    formStatus.textContent = 'Unable to send right now. Please call or email us directly.';
+                    formStatus.textContent = error.message || 'Unable to send right now. Please call or email us directly.';
                 }
             } finally {
                 if (submitButton) {

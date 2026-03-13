@@ -14,7 +14,8 @@
    ```bash
    npm start
    ```
-4. Open `http://localhost:3000`.
+4. Open `http://localhost:3000` for the main website.
+5. Open `http://localhost:3000/upload.html` for the admin upload page.
 
 The SQLite database file is created automatically at `data.db`.
 
@@ -46,3 +47,14 @@ curl -X POST http://localhost:3000/api/admin/properties \
     "image":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"
   }'
 ```
+
+
+## Troubleshooting upload failures
+
+- `Upload API is unavailable...`: backend is not running on the same host/port. Start with:
+  ```bash
+  npm install
+  ADMIN_API_KEY='your-strong-admin-key' npm start
+  ```
+- `Unauthorized: admin API key is incorrect...`: the key typed in the form must exactly match server `ADMIN_API_KEY`.
+- `Validation failed...`: ensure title, location, price, listing type, and category are provided.

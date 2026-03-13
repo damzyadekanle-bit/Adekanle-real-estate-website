@@ -52,6 +52,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return card;
     }
 
+    async function checkBackendAvailability() {
+        try {
+            const response = await fetch('/api/health');
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
+    }
+
     async function loadPropertiesFromApi() {
         if (!propertiesGrid) return;
 
@@ -101,9 +110,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const addPropertyForm = document.getElementById('addPropertyForm');
     const addPropertyStatus = document.getElementById('addPropertyStatus');
 
-    if (addPropertyForm && propertiesGrid) {
+    if (addPropertyForm) {
         addPropertyForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            if (addPropertyStatus) {
+                addPropertyStatus.className = 'form-status';
+                addPropertyStatus.textContent = 'Checking backend...';
+            }
+
+            const backendAvailable = await checkBackendAvailability();
+            if (!backendAvailable) {
+                if (addPropertyStatus) {
+                    addPropertyStatus.className = 'form-status error';
+                    addPropertyStatus.textContent = 'Upload API is unavailable. Start backend with npm install && ADMIN_API_KEY=your-key npm start.';
+                }
+                return;
+            }
 
             const formData = new FormData(addPropertyForm);
             const adminApiKey = (formData.get('adminApiKey') || '').toString().trim();
@@ -140,10 +163,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const body = await response.json().catch(() => ({}));
 
                 if (!response.ok) {
+                    if (response.status === 401) {
+                        throw new Error('Unauthorized: admin API key is incorrect. Set ADMIN_API_KEY on the server and use the same value here.');
+                    }
+                    if (response.status === 400) {
+                        throw new Error(body.error || 'Validation failed. Check required fields.');
+                    }
                     throw new Error(body.error || 'Failed to upload property.');
                 }
 
-                propertiesGrid.appendChild(createPropertyCard(body));
+                if (propertiesGrid) {
+                    propertiesGrid.appendChild(createPropertyCard(body));
+                }
                 addPropertyForm.reset();
                 if (addPropertyStatus) {
                     addPropertyStatus.className = 'form-status success';

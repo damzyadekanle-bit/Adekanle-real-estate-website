@@ -357,6 +357,13 @@ h2 {
     max-width: 760px;
     margin: 0 auto;
 }
+
+.upload-page .manage-listings {
+    padding-top: 150px;
+    min-height: 100vh;
+    background: var(--light);
+}
+
 /* Services */
 .services {
     padding: 80px 0;

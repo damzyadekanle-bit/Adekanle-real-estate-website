@@ -17,6 +17,7 @@
                 <a href="#home">Home</a>
                 <a href="#listings">Listings</a>
                 <a href="#services">Services</a>
+                <a href="#manage-listings">Upload Property</a>
                 <a href="#about">About</a>
                 <a href="#contact" class="btn-contact">Contact</a>
             </div>
@@ -125,7 +126,7 @@
                 </div>
                 
                 <!-- Property 3 -->
-               <div class="property-card" data-category="commercial land">
+                <div class="property-card" data-category="commercial land">
                     <div class="property-image">
                         <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Commercial Space">
                         <span class="property-type">Commercial</span>
@@ -169,6 +170,63 @@
             
             <div class="text-center">
                 <button class="btn-primary">View All Properties</button>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Upload Property -->
+    <section class="manage-listings" id="manage-listings">
+        <div class="container">
+            <h2 class="section-title">Upload Property</h2>
+            <p class="section-subtitle">Add a property listing directly from this website dashboard (saved to backend database).</p>
+            <div class="contact-form">
+                <form id="addPropertyForm">
+                    <div class="form-group">
+                        <input type="password" name="adminApiKey" placeholder="Admin API Key" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="title" placeholder="Property Title" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="location" placeholder="Location" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="price" placeholder="Price (e.g. $450,000)" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="number" name="beds" placeholder="Beds" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="number" name="baths" placeholder="Baths" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="size" placeholder="Size in sqft" required>
+                    </div>
+                    <div class="form-group">
+                        <select name="listingType" required>
+                            <option value="" disabled selected>Listing Type</option>
+                            <option>For Sale</option>
+                            <option>For Rent</option>
+                            <option>Commercial</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select name="category" required>
+                            <option value="" disabled selected>Category</option>
+                            <option value="house">House</option>
+                            <option value="apartment">Apartment</option>
+                            <option value="commercial">Commercial</option>
+                            <option value="land">Land</option>
+                            <option value="joint-venture">Joint venture</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="url" name="image" placeholder="Image URL (optional)">
+                    </div>
+                    <button type="submit" class="btn-primary">Upload Property</button>
+                    <p id="addPropertyStatus" class="form-status" aria-live="polite"></p>
+                </form>
             </div>
         </div>
     </section>

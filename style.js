@@ -1,6 +1,10 @@
 // Property Filtering
 document.addEventListener('DOMContentLoaded', function() {
     const propertiesGrid = document.querySelector('.properties-grid');
+    const API_BASE_URL = 'https://adekanle-real-estate-website.onrender.com';
+    const UPLOAD_ENDPOINT = `${API_BASE_URL}/upload-property`;
+    const PROPERTIES_ENDPOINT = `${API_BASE_URL}/api/properties`;
+    const ADMIN_API_KEY = 'Adekanle2993';
 
     function createElement(tag, className, textContent) {
         const element = document.createElement(tag);
@@ -51,21 +55,11 @@ document.addEventListener('DOMContentLoaded', function() {
         card.append(imageWrap, details);
         return card;
     }
-
-    async function checkBackendAvailability() {
-        try {
-            const response = await fetch('/api/health');
-            return response.ok;
-        } catch (error) {
-            return false;
-        }
-    }
-
     async function loadPropertiesFromApi() {
         if (!propertiesGrid) return;
 
         try {
-            const response = await fetch('/api/properties');
+            const response = await fetch(PROPERTIES_ENDPOINT);
             if (!response.ok) return;
             const properties = await response.json();
             properties.forEach(property => propertiesGrid.appendChild(createPropertyCard(property)));
@@ -116,20 +110,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (addPropertyStatus) {
                 addPropertyStatus.className = 'form-status';
-                addPropertyStatus.textContent = 'Checking backend...';
-            }
-
-            const backendAvailable = await checkBackendAvailability();
-            if (!backendAvailable) {
-                if (addPropertyStatus) {
-                    addPropertyStatus.className = 'form-status error';
-                    addPropertyStatus.textContent = 'Upload API is unavailable. Start backend with npm install && ADMIN_API_KEY=your-key npm start.';
-                }
-                return;
+                addPropertyStatus.textContent = 'Uploading property...';
             }
 
             const formData = new FormData(addPropertyForm);
-            const adminApiKey = (formData.get('adminApiKey') || '').toString().trim();
             const property = {
                 title: formData.get('title')?.toString().trim(),
                 location: formData.get('location')?.toString().trim(),
@@ -142,20 +126,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 image: formData.get('image')?.toString().trim()
             };
 
-            if (!adminApiKey) {
-                if (addPropertyStatus) {
-                    addPropertyStatus.className = 'form-status error';
-                    addPropertyStatus.textContent = 'Admin API key is required to upload properties.';
-                }
-                return;
-            }
-
             try {
-                const response = await fetch('/api/admin/properties', {
+                const response = await fetch(UPLOAD_ENDPOINT, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-admin-api-key': adminApiKey
+                        'x-admin-api-key': ADMIN_API_KEY
                     },
                     body: JSON.stringify(property)
                 });
@@ -169,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (response.status === 400) {
                         throw new Error(body.error || 'Validation failed. Check required fields.');
                     }
-                    throw new Error(body.error || 'Failed to upload property.');
+                    throw new Error(body.error || 'Failed to upload property. Check backend CORS, endpoint, and Render server logs.');
                 }
 
                 if (propertiesGrid) {

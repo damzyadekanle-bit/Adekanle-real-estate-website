@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const propertiesGrid = document.querySelector('.properties-grid');
     const API_BASE_URL = 'https://adekanle-real-estate-website.onrender.com';
-    const UPLOAD_ENDPOINT = `${API_BASE_URL}/upload-property`;
+    const UPLOAD_ENDPOINT = `${API_BASE_URL}/api/admin/properties`;
     const PROPERTIES_ENDPOINT = `${API_BASE_URL}/api/properties`;
     const ADMIN_API_KEY = 'Adekanle2993';
 

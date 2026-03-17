@@ -15,7 +15,7 @@
    npm start
    ```
 4. Open `http://localhost:3000` for the main website.
-5. Open `http://localhost:3000/upload.html` for the admin upload page.
+5. Open `http://localhost:3000/upload.html` directly for the admin upload page (this link is intentionally hidden from public navigation).
 
 The SQLite database file is created automatically at `data.db`.
 
@@ -26,13 +26,14 @@ The SQLite database file is created automatically at `data.db`.
 - `GET /api/properties`
 
 ### Admin (requires `x-admin-api-key` header)
-- `POST /api/admin/properties`
+- `POST /api/properties`
+- `POST /api/admin/properties` (legacy alias)
 - `PUT /api/admin/properties/:id`
 - `DELETE /api/admin/properties/:id`
 
 ### Example admin upload
 ```bash
-curl -X POST http://localhost:3000/api/admin/properties \
+curl -X POST http://localhost:3000/api/properties \
   -H 'Content-Type: application/json' \
   -H 'x-admin-api-key: your-strong-admin-key' \
   -d '{

@@ -15,7 +15,7 @@
    npm start
    ```
 4. Open `http://localhost:3000` for the main website.
-5. Open `http://localhost:3000/upload.html` for the admin upload page.
+5. Open `http://localhost:3000/upload.html` directly for the admin upload page (this link is intentionally hidden from public navigation).
 
 The SQLite database file is created automatically at `data.db`.
 

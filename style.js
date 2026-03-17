@@ -6,6 +6,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const PROPERTIES_ENDPOINT = `${API_BASE_URL}/api/properties`;
     const ADMIN_API_KEY = 'Adekanle2993';
 
+    function hideUploadNavLinks() {
+        document.querySelectorAll('.nav-links a').forEach((link) => {
+            if ((link.textContent || '').trim().toLowerCase() === 'upload property') {
+                link.remove();
+            }
+        });
+    }
+
     function createElement(tag, className, textContent) {
         const element = document.createElement(tag);
         if (className) element.className = className;
@@ -62,12 +70,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(PROPERTIES_ENDPOINT);
             if (!response.ok) return;
             const properties = await response.json();
-            properties.forEach(property => propertiesGrid.appendChild(createPropertyCard(property)));
+            properties.slice().reverse().forEach((property) => propertiesGrid.prepend(createPropertyCard(property)));
         } catch (error) {
             // Keep static listings even if API is unavailable.
         }
     }
 
+    hideUploadNavLinks();
     loadPropertiesFromApi();
 
     // Filter properties
@@ -149,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (propertiesGrid) {
-                    propertiesGrid.appendChild(createPropertyCard(body));
+                    propertiesGrid.prepend(createPropertyCard(body));
                 }
                 addPropertyForm.reset();
                 if (addPropertyStatus) {

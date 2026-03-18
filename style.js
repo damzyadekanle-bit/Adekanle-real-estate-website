@@ -1,4 +1,3 @@
-// Property Filtering
 document.addEventListener('DOMContentLoaded', function() {
     const propertiesGrid = document.querySelector('.properties-grid');
     const addPropertyForm = document.getElementById('addPropertyForm');
@@ -8,16 +7,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const adminLoginForm = document.getElementById('adminLoginForm');
     const adminLoginStatus = document.getElementById('adminLoginStatus');
     const adminAuthInfo = document.getElementById('adminAuthInfo');
-    const API_BASE_URL = "https://adekanle-real-estate-website.onrender.com";
+
+    const API_BASE_URL = window.location.origin;
     const UPLOAD_ENDPOINT = `${API_BASE_URL}/api/properties`;
     const PROPERTIES_ENDPOINT = `${API_BASE_URL}/api/properties`;
     const ADMIN_LOGIN_ENDPOINT = `${API_BASE_URL}/api/admin/login`;
     const ADMIN_ME_ENDPOINT = `${API_BASE_URL}/api/admin/me`;
     const ADMIN_LOGOUT_ENDPOINT = `${API_BASE_URL}/api/admin/logout`;
     const ADMIN_UPDATE_ENDPOINT = `${API_BASE_URL}/api/admin/properties`;
+    const ANALYTICS_ENDPOINT = `${API_BASE_URL}/api/analytics/events`;
+
     const ADMIN_API_KEY_STORAGE_KEY = 'adekanle_admin_api_key';
     const ADMIN_SESSION_TOKEN_KEY = 'adekanle_admin_session_token';
     const ADMIN_SESSION_USER_KEY = 'adekanle_admin_session_user';
+
+    let activeFilters = {
+        category: 'all',
+        q: '',
+        location: '',
+        listingType: '',
+        beds: '',
+        minPrice: '',
+        maxPrice: '',
+        page: 1,
+        limit: 12
+    };
+
+    function trackEvent(eventType, metadata = {}) {
+        fetch(ANALYTICS_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                eventType,
+                page: window.location.pathname,
+                propertyId: metadata.propertyId || null,
+                metadata
+            })
+        }).catch(() => {
+            // Non-blocking analytics call.
+        });
+    }
+
     function hideUploadNavLinks() {
         document.querySelectorAll('.nav-links a').forEach((link) => {
             if ((link.textContent || '').trim().toLowerCase() === 'upload property') {
@@ -31,6 +61,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (className) element.className = className;
         if (textContent !== undefined && textContent !== null) element.textContent = textContent;
         return element;
+    }
+
+    function toPropertyDetailsUrl(property) {
+        return `property.html?id=${encodeURIComponent(property.id)}`;
     }
 
     function createPropertyCard(property) {
@@ -68,8 +102,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const priceRow = createElement('div', 'property-price');
         priceRow.appendChild(createElement('strong', '', property.price || 'Price on request'));
-        const viewBtn = createElement('button', 'btn-view', 'View Details');
-        priceRow.appendChild(viewBtn);
+
+        const viewLink = createElement('a', 'btn-view', 'View Details');
+        viewLink.href = toPropertyDetailsUrl(property);
+        viewLink.dataset.propertyId = property.id || '';
+        viewLink.addEventListener('click', () => trackEvent('view_details_click', { propertyId: property.id }));
+
+        priceRow.appendChild(viewLink);
         details.appendChild(priceRow);
 
         card.append(imageWrap, details);
@@ -92,14 +131,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY) || '';
     }
 
-    function setSession(token, userInfo = '') {
+    function setSession(token) {
         if (!token) {
             sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
             sessionStorage.removeItem(ADMIN_SESSION_USER_KEY);
             return;
         }
         sessionStorage.setItem(ADMIN_SESSION_TOKEN_KEY, token);
-        sessionStorage.setItem(ADMIN_SESSION_USER_KEY, userInfo);
     }
 
     function getAuthHeaders({ includeJson = false } = {}) {
@@ -281,25 +319,65 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!response.ok) {
                 throw new Error('Failed to load property list.');
             }
-            const properties = await response.json();
-            renderAdminProperties(properties);
+            const payload = await response.json();
+            renderAdminProperties(Array.isArray(payload) ? payload : payload.data || []);
         } catch (error) {
             setStatus(adminListStatus, error.message || 'Unable to load properties.', 'error');
         }
     }
 
+    function renderProperties(properties) {
+        if (!propertiesGrid) return;
+        propertiesGrid.innerHTML = '';
+        properties.forEach((property) => propertiesGrid.appendChild(createPropertyCard(property)));
+    }
+
     async function loadPropertiesFromApi() {
         if (!propertiesGrid) return;
 
+        const params = new URLSearchParams();
+        if (activeFilters.category && activeFilters.category !== 'all') params.set('category', activeFilters.category);
+        if (activeFilters.q) params.set('q', activeFilters.q);
+        if (activeFilters.location) params.set('location', activeFilters.location);
+        if (activeFilters.listingType) params.set('listingType', activeFilters.listingType);
+        if (activeFilters.beds) params.set('beds', activeFilters.beds);
+        if (activeFilters.minPrice) params.set('minPrice', activeFilters.minPrice);
+        if (activeFilters.maxPrice) params.set('maxPrice', activeFilters.maxPrice);
+        params.set('page', String(activeFilters.page));
+        params.set('limit', String(activeFilters.limit));
+
         try {
-            const response = await fetch(PROPERTIES_ENDPOINT);
+            const response = await fetch(`${PROPERTIES_ENDPOINT}?${params.toString()}`);
             if (!response.ok) return;
-            const properties = await response.json();
-            propertiesGrid.querySelectorAll('[data-db-id]').forEach((node) => node.remove());
-            properties.slice().reverse().forEach((property) => propertiesGrid.prepend(createPropertyCard(property)));
-        } catch (error) {
+            const payload = await response.json();
+            const items = Array.isArray(payload) ? payload : payload.data || [];
+            renderProperties(items);
+
+            const paginationSummary = document.getElementById('paginationSummary');
+            if (paginationSummary && payload.pagination) {
+                const { page, totalPages, total } = payload.pagination;
+                paginationSummary.textContent = `Page ${page} of ${Math.max(totalPages, 1)} • ${total} result(s)`;
+            }
+        } catch (_error) {
             // Keep static listings even if API is unavailable.
         }
+    }
+
+    function syncSearchControls() {
+        const listingTypeInput = document.getElementById('listingTypeFilter');
+        const locationInput = document.getElementById('locationFilter');
+        const bedsInput = document.getElementById('bedsFilter');
+        const minPriceInput = document.getElementById('minPriceFilter');
+        const maxPriceInput = document.getElementById('maxPriceFilter');
+        const keywordInput = document.getElementById('keywordFilter');
+
+        activeFilters.listingType = listingTypeInput?.value || '';
+        activeFilters.location = locationInput?.value || '';
+        activeFilters.beds = bedsInput?.value || '';
+        activeFilters.minPrice = minPriceInput?.value || '';
+        activeFilters.maxPrice = maxPriceInput?.value || '';
+        activeFilters.q = keywordInput?.value || '';
+        activeFilters.page = 1;
     }
 
     hideUploadNavLinks();
@@ -308,37 +386,42 @@ document.addEventListener('DOMContentLoaded', function() {
     loadPropertiesFromApi();
     refreshAdminProperties();
 
-    // Filter properties
     const filterButtons = document.querySelectorAll('.filter-btn');
-
-    filterButtons.forEach(button => {
+    filterButtons.forEach((button) => {
         button.addEventListener('click', function() {
-            filterButtons.forEach(btn => btn.classList.remove('active'));
+            filterButtons.forEach((btn) => btn.classList.remove('active'));
             this.classList.add('active');
-
-            const filterValue = this.getAttribute('data-filter');
-            const propertyCards = document.querySelectorAll('.property-card');
-
-            propertyCards.forEach(card => {
-                const categories = (card.getAttribute('data-category') || '').split(/\s+/);
-                if (filterValue === 'all' || categories.includes(filterValue)) {
-                    card.style.display = 'block';
-                    setTimeout(() => {
-                        card.style.opacity = '1';
-                        card.style.transform = 'scale(1)';
-                    }, 100);
-                } else {
-                    card.style.opacity = '0';
-                    card.style.transform = 'scale(0.8)';
-                    setTimeout(() => {
-                        card.style.display = 'none';
-                    }, 300);
-                }
-            });
+            activeFilters.category = this.getAttribute('data-filter') || 'all';
+            activeFilters.page = 1;
+            trackEvent('category_filter', { category: activeFilters.category });
+            loadPropertiesFromApi();
         });
     });
 
-    // Add property form (admin API)
+    const searchButton = document.querySelector('.btn-search');
+    if (searchButton) {
+        searchButton.addEventListener('click', function() {
+            syncSearchControls();
+            trackEvent('listing_search', { ...activeFilters });
+            loadPropertiesFromApi();
+        });
+    }
+
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', function() {
+            activeFilters.page = Math.max(activeFilters.page - 1, 1);
+            loadPropertiesFromApi();
+        });
+    }
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', function() {
+            activeFilters.page += 1;
+            loadPropertiesFromApi();
+        });
+    }
+
     if (adminLoginForm) {
         adminLoginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -357,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!response.ok) {
                     throw new Error(body.error || 'Login failed.');
                 }
-                setSession(body.token, `${body.username} (${body.role})`);
+                setSession(body.token);
                 setStatus(adminLoginStatus, 'Login successful.', 'success');
                 updateAuthInfoBanner(`Logged in as ${body.username} (${body.role})`);
                 adminLoginForm.reset();
@@ -402,8 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 size: formData.get('size')?.toString().trim(),
                 listingType: formData.get('listingType')?.toString().trim(),
                 category: formData.get('category')?.toString().trim(),
-                image: formData.get('image')?.toString().trim(),
-                adminApiKey: formData.get('adminApiKey')?.toString().trim()
+                image: formData.get('image')?.toString().trim()
             };
             const imageFile = addPropertyForm.querySelector('input[name="imageFile"]')?.files?.[0];
             let imageData = '';
@@ -421,25 +503,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            if (!adminApiKey) {
-                setStatus(addPropertyStatus, 'Admin API key is required.', 'error');
-                return;
-            }
-
             try {
                 const response = await fetch(UPLOAD_ENDPOINT, {
                     method: 'POST',
                     headers: getAuthHeaders({ includeJson: true }),
                     body: JSON.stringify({
-                        title: property.title,
-                        location: property.location,
-                        price: property.price,
-                        beds: property.beds,
-                        baths: property.baths,
-                        size: property.size,
-                        listingType: property.listingType,
-                        category: property.category,
-                        image: property.image,
+                        ...property,
                         imageData,
                         imageName: imageFile?.name || ''
                     })
@@ -449,17 +518,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        throw new Error('Unauthorized: admin API key is incorrect. Set ADMIN_API_KEY on the server and use the same value here.');
+                        throw new Error('Unauthorized: admin API key is incorrect.');
                     }
                     if (response.status === 400) {
                         throw new Error(body.error || 'Validation failed. Check required fields.');
                     }
-                    throw new Error(body.error || 'Failed to upload property. Check backend CORS, endpoint, and Render server logs.');
+                    throw new Error(body.error || 'Failed to upload property.');
                 }
 
-                if (propertiesGrid) {
-                    propertiesGrid.prepend(createPropertyCard(body));
-                }
                 if (adminApiKey) {
                     cacheAdminKeyIfRequested(adminApiKey);
                 }
@@ -468,13 +534,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 setStatus(addPropertyStatus, 'Property uploaded and saved to the database.', 'success');
                 setStatus(adminListStatus, 'Property list refreshed.', 'success');
                 await refreshAdminProperties();
+                await loadPropertiesFromApi();
             } catch (error) {
                 setStatus(addPropertyStatus, error.message || 'Failed to upload property.', 'error');
             }
         });
     }
 
-    // Mobile menu toggle
     const menuToggle = document.querySelector('.menu-toggle');
     const navLinks = document.querySelector('.nav-links');
 
@@ -494,22 +560,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Contact form submission
     const contactForm = document.getElementById('contactForm');
     const formStatus = document.getElementById('formStatus');
     if (contactForm) {
         contactForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const endpoint = contactForm.getAttribute('action') || '';
-
-            if (!endpoint.includes('formspree.io/f/')) {
-                if (formStatus) {
-                    formStatus.className = 'form-status error';
-                    formStatus.textContent = 'Form endpoint looks invalid. Update the form action URL in index.html.';
-                }
-                return;
-            }
-
             const submitButton = contactForm.querySelector('button[type="submit"]');
             const originalText = submitButton ? submitButton.textContent : '';
 
@@ -531,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (!response.ok) {
                     const apiErrors = Array.isArray(responseBody?.errors)
-                        ? responseBody.errors.map(error => error.message).join(' ')
+                        ? responseBody.errors.map((error) => error.message).join(' ')
                         : '';
 
                     let errorMessage = apiErrors || 'Form submission failed.';
@@ -551,6 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     formStatus.className = 'form-status success';
                     formStatus.textContent = 'Thanks! Your enquiry has been received. We will contact you shortly.';
                 }
+                trackEvent('contact_form_submit', { source: 'homepage' });
                 contactForm.reset();
             } catch (error) {
                 if (formStatus) {
@@ -566,23 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // View property details (event delegation so it works for uploaded cards too)
-    if (propertiesGrid) {
-        propertiesGrid.addEventListener('click', function(event) {
-            const viewButton = event.target.closest('.btn-view');
-            if (!viewButton) return;
-
-            const card = viewButton.closest('.property-card');
-            if (!card) return;
-
-            const propertyName = card.querySelector('h3')?.textContent || 'Property';
-            const propertyPrice = card.querySelector('strong')?.textContent || 'Price on request';
-            alert(`Property: ${propertyName}\nPrice: ${propertyPrice}\n\nFull details page would open here with more images, descriptions, virtual tour, and contact options.`);
-        });
-    }
-
-    // Smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
         anchor.addEventListener('click', function(e) {
             e.preventDefault();
             const targetId = this.getAttribute('href');
@@ -601,4 +642,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    trackEvent('page_view', { page: window.location.pathname });
 });

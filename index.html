@@ -4,12 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ADEKANLE AND ADEKANLE REAL ESTATE | Premium Properties</title>
+    <meta name="description" content="Discover premium homes, apartments, and commercial listings with ADEKANLE AND ADEKANLE REAL ESTATE.">
+    <meta property="og:title" content="ADEKANLE AND ADEKANLE REAL ESTATE | Premium Properties">
+    <meta property="og:description" content="Search listings, view property details, and submit inquiries online.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ADEKANLE AND ADEKANLE REAL ESTATE">
+    <meta name="twitter:description" content="Premium property listings with inquiry workflow.">
+    <link rel="canonical" href="/">
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "RealEstateAgent",
+      "name": "ADEKANLE AND ADEKANLE REAL ESTATE",
+      "url": "/",
+      "telephone": "+2347051929135",
+      "email": "info@adekanlerealestate.com"
+    }
+    </script>
 </head>
 <body>
-    <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
             <a href="#" class="logo">ADEKANLE AND ADEKANLE <span> REAL ESTATE</span></a>
@@ -26,33 +45,35 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
     <section class="hero" id="home">
         <div class="container">
             <div class="hero-content">
                 <h1>Find Your Dream Property</h1>
                 <p>Discover premium homes, luxury apartments, and investment properties with ADEKANLE AND ADEKANLE REAL ESTATE</p>
-                
-                <!-- Quick Search -->
+
                 <div class="search-box">
                     <div class="search-option">
-                        <select>
-                            <option>Buy</option>
-                            <option>Rent</option>
-                            <option>Commercial</option>
+                        <select id="listingTypeFilter">
+                            <option value="">Any Listing Type</option>
+                            <option value="For Sale">For Sale</option>
+                            <option value="For Rent">For Rent</option>
+                            <option value="Commercial">Commercial</option>
                         </select>
                     </div>
                     <div class="search-option">
-                        <input type="text" placeholder="City, Neighborhood, or ZIP">
+                        <input id="locationFilter" type="text" placeholder="City, Neighborhood, or ZIP">
                     </div>
                     <div class="search-option">
-                        <select>
-                            <option>Property Type</option>
-                            <option>House</option>
-                            <option>Apartment</option>
-                            <option>Condo</option>
-                            <option>Villa</option>
-                        </select>
+                        <input id="keywordFilter" type="text" placeholder="Keyword search">
+                    </div>
+                    <div class="search-option">
+                        <input id="bedsFilter" type="number" min="0" placeholder="Min beds">
+                    </div>
+                    <div class="search-option">
+                        <input id="minPriceFilter" type="number" min="0" placeholder="Min price">
+                    </div>
+                    <div class="search-option">
+                        <input id="maxPriceFilter" type="number" min="0" placeholder="Max price">
                     </div>
                     <button class="btn-search">
                         <i class="fas fa-search"></i> Search
@@ -62,13 +83,11 @@
         </div>
     </section>
 
-    <!-- Featured Listings -->
     <section class="listings" id="listings">
         <div class="container">
             <h2 class="section-title">Featured Properties</h2>
             <p class="section-subtitle">Handpicked premium properties for discerning clients</p>
-            
-            <!-- Filter Options -->
+
             <div class="filters">
                 <button class="filter-btn active" data-filter="all">All</button>
                 <button class="filter-btn" data-filter="house">Houses</button>
@@ -77,10 +96,8 @@
                 <button class="filter-btn" data-filter="commercial">Commercial</button>
                 <button class="filter-btn" data-filter="joint-venture">Joint venture</button>
             </div>
-            
-            <!-- Properties Grid -->
+
             <div class="properties-grid">
-                <!-- Property 1 -->
                 <div class="property-card" data-category="house luxury">
                     <div class="property-image">
                         <img src="images/images/properties/modern-villa.jpg" alt="Modern Villa">
@@ -97,84 +114,24 @@
                         </div>
                         <div class="property-price">
                             <strong>$3,850,000</strong>
-                            <button class="btn-view">View Details</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Property 2 -->
-                <div class="property-card" data-category="apartment">
-                    <div class="property-image">
-                       <img src="images/images/properties/Precious-villa.PNG" alt="Luxury Apartment">
-                        <span class="property-badge rent">For Rent</span>
-                        <span class="property-type">Rental</span>
-                    </div>
-                    <div class="property-details">
-                        <h3>PRECIOUS</h3>
-                        <p><i class="fas fa-map-marker-alt"></i> LONDON</p>
-                        <div class="property-features">
-                            <span><i class="fas fa-bed"></i> 3 Beds</span>
-                            <span><i class="fas fa-bath"></i> 2 Baths</span>
-                            <span><i class="fas fa-ruler-combined"></i> 1,800 sqft</span>
-                        </div>
-                        <div class="property-price">
-                            <strong>$8,500/month</strong>
-                            <button class="btn-view">View Details</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Property 3 -->
-                <div class="property-card" data-category="commercial land">
-                    <div class="property-image">
-                        <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Commercial Space">
-                        <span class="property-type">Commercial</span>
-                    </div>
-                    <div class="property-details">
-                        <h3>Prime Office Space</h3>
-                        <p><i class="fas fa-map-marker-alt"></i> 789 Business District, Chicago</p>
-                        <div class="property-features">
-                            <span><i class="fas fa-building"></i> 12 Floors</span>
-                            <span><i class="fas fa-car"></i> 200 Parking</span>
-                            <span><i class="fas fa-ruler-combined"></i> 25,000 sqft</span>
-                        </div>
-                        <div class="property-price">
-                            <strong>$12,000,000</strong>
-                            <button class="btn-view">View Details</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Property 4 -->
-                <div class="property-card" data-category="house">
-                    <div class="property-image">
-                        <img src="https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Family Home">
-                        <span class="property-type">For Sale</span>
-                    </div>
-                    <div class="property-details">
-                        <h3>Suburban Family Home</h3>
-                        <p><i class="fas fa-map-marker-alt"></i> 101 Maple St, Austin</p>
-                        <div class="property-features">
-                            <span><i class="fas fa-bed"></i> 4 Beds</span>
-                            <span><i class="fas fa-bath"></i> 3 Baths</span>
-                            <span><i class="fas fa-ruler-combined"></i> 2,800 sqft</span>
-                        </div>
-                        <div class="property-price">
-                            <strong>$950,000</strong>
-                            <button class="btn-view">View Details</button>
+                            <a class="btn-view" href="property.html">View Details</a>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
+            <div class="pagination-controls text-center">
+                <button id="prevPageBtn" class="btn-secondary" type="button">Previous</button>
+                <button id="nextPageBtn" class="btn-secondary" type="button">Next</button>
+                <p id="paginationSummary" class="admin-property-meta"></p>
+            </div>
+
             <div class="text-center">
                 <button class="btn-primary">View All Properties</button>
             </div>
         </div>
     </section>
 
-
-    <!-- Services -->
     <section class="services" id="services">
         <div class="container">
             <h2 class="section-title">Our Services</h2>
@@ -203,36 +160,35 @@
         </div>
     </section>
 
-    <!-- Contact Form -->
     <section class="contact" id="contact">
         <div class="container">
             <div class="contact-wrapper">
                 <div class="contact-info">
                     <h2>Contact Us</h2>
                     <p>Ready to find your dream property? Get in touch with our experts.</p>
-                    
+
                     <div class="contact-details">
                         <p><i class="fas fa-map-marker-alt"></i> Road 1, Block A39 & 42, Ikota Shopping Complex, Ajah Lekki. </p>
                         <p><i class="fas fa-phone"></i> +2347051929135, +2348033048940, +2348027922526</p>
                         <p><i class="fas fa-envelope"></i> info@adekanlerealestate.com</p>
                         <p><i class="fas fa-clock"></i> Mon-Fri: 9am-6pm, Sat: 10am-4pm</p>
                     </div>
-                    
+
                     <div class="social-links">
                         <a href="#"><i class="fab fa-facebook"></i></a>
                         <a href="https://www.instagram.com/adekanleandadekanle.realestate?igsh=NTc4MTIwNjQ2YQ%3D%3D&utm_source=qr"><i class="fab fa-instagram"></i></a>
                         <a href="#"><i class="fab fa-youtube"></i></a>
                     </div>
                 </div>
-                
+
                 <div class="contact-form">
                     <h3>Schedule a Viewing</h3>
-                   <form id="contactForm" action="https://formspree.io/f/xwvrbrgq" method="POST">
+                    <form id="contactForm" action="https://formspree.io/f/xwvrbrgq" method="POST">
                         <div class="form-group">
-                             <input type="text" name="name" placeholder="Your Name" required>
+                            <input type="text" name="name" placeholder="Your Name" required>
                         </div>
                         <div class="form-group">
-                             <input type="email" name="email" placeholder="Your Email" required>
+                            <input type="email" name="email" placeholder="Your Email" required>
                         </div>
                         <div class="form-group">
                             <input type="tel" name="phone" placeholder="Phone Number">
@@ -250,21 +206,20 @@
                         <div class="form-group">
                             <textarea name="message" placeholder="Message" rows="4" required></textarea>
                         </div>
-                       <input type="hidden" name="source" value="Website enquiry form">
+                        <input type="hidden" name="source" value="Website enquiry form">
                         <button type="submit" class="btn-primary">Submit Inquiry</button>
-                       <p id="formStatus" class="form-status" aria-live="polite"></p>
+                        <p id="formStatus" class="form-status" aria-live="polite"></p>
                     </form>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
     <footer>
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                     <h3>ADEKANLE AND ADEKANLE REAL ESTATE</h3>
+                    <h3>ADEKANLE AND ADEKANLE REAL ESTATE</h3>
                     <p>Premium real estate services for buyers, renters, and investors in Nigeria and beyond.</p>
                 </div>
                 <div class="footer-section">
@@ -291,12 +246,11 @@
                 </div>
             </div>
             <div class="footer-bottom">
-               <p>&copy; 2024 ADEKANLE AND ADEKANLE REAL ESTATE. All rights reserved.</p>
+                <p>&copy; 2024 ADEKANLE AND ADEKANLE REAL ESTATE. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
-    <!-- JavaScript -->
-   <script src="style.js"></script>
+    <script src="style.js"></script>
 </body>
 </html>

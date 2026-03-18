@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Details | ADEKANLE AND ADEKANLE REAL ESTATE</title>
+    <meta name="description" content="Explore full property details and send an inquiry directly to ADEKANLE AND ADEKANLE REAL ESTATE.">
+    <meta property="og:title" content="Property Details | ADEKANLE AND ADEKANLE REAL ESTATE">
+    <meta property="og:description" content="Explore full property details and submit your inquiry.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="/property.html">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="property-page">
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">ADEKANLE AND ADEKANLE <span> REAL ESTATE</span></a>
+            <div class="nav-links">
+                <a href="index.html#listings">Back to Listings</a>
+                <a href="index.html#contact" class="btn-contact">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="property-detail-wrapper container">
+        <section id="propertyDetail" class="property-detail-card">
+            <p>Loading property details...</p>
+        </section>
+
+        <section class="contact-form">
+            <h2>Inquire About This Property</h2>
+            <form id="propertyInquiryForm">
+                <div class="form-group">
+                    <input type="text" name="name" placeholder="Your Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="email" placeholder="Your Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="tel" name="phone" placeholder="Phone Number">
+                </div>
+                <div class="form-group">
+                    <textarea name="message" rows="4" placeholder="I would like to schedule a viewing for this property." required></textarea>
+                </div>
+                <button class="btn-primary" type="submit">Send Inquiry</button>
+                <p id="propertyInquiryStatus" class="form-status" aria-live="polite"></p>
+            </form>
+        </section>
+    </main>
+
+    <script src="property.js"></script>
+</body>
+</html>

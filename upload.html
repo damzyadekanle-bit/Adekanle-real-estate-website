@@ -16,7 +16,6 @@
                 <a href="index.html#home">Home</a>
                 <a href="index.html#listings">Listings</a>
                 <a href="index.html#services">Services</a>
-                <a href="upload.html">Upload Property</a>
                 <a href="index.html#contact" class="btn-contact">Contact</a>
             </div>
             <button class="menu-toggle">
@@ -29,6 +28,22 @@
         <div class="container">
             <h2 class="section-title">Upload Property</h2>
             <p class="section-subtitle">Add a property listing directly from this admin page (saved to backend database on Render).</p>
+            <div class="contact-form admin-auth-panel">
+                <h3>Admin Login</h3>
+                <p class="section-subtitle admin-subtitle">Login with admin/editor credentials. Legacy API key is still supported below.</p>
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <input type="text" name="username" placeholder="Admin Username" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" name="password" placeholder="Admin Password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Login</button>
+                    <button type="button" class="btn-secondary" id="adminLogoutButton">Logout</button>
+                    <p id="adminLoginStatus" class="form-status" aria-live="polite"></p>
+                    <p id="adminAuthInfo" class="form-status" aria-live="polite"></p>
+                </form>
+            </div>
             <div class="contact-form">
                 <form id="addPropertyForm">
                     <div class="form-group">
@@ -70,9 +85,28 @@
                     <div class="form-group">
                         <input type="url" name="image" placeholder="Image URL (optional)">
                     </div>
+                    <div class="form-group">
+                        <input type="file" name="imageFile" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" name="adminApiKey" placeholder="Admin API Key (legacy option)" autocomplete="off">
+                    </div>
+                    <div class="form-group remember-key">
+                        <label>
+                            <input type="checkbox" name="rememberAdminKey">
+                            Remember admin key on this device
+                        </label>
+                    </div>
                     <button type="submit" class="btn-primary">Upload Property</button>
                     <p id="addPropertyStatus" class="form-status" aria-live="polite"></p>
                 </form>
+            </div>
+
+            <div class="contact-form admin-list-panel">
+                <h3>Manage Uploaded Properties</h3>
+                <p class="section-subtitle admin-subtitle">Use the same Admin API key above to edit or delete listings.</p>
+                <p id="adminListStatus" class="form-status" aria-live="polite"></p>
+                <div id="adminPropertiesList" class="admin-properties-list"></div>
             </div>
         </div>
     </section>

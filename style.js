@@ -291,7 +291,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 size: formData.get('size')?.toString().trim(),
                 listingType: formData.get('listingType')?.toString().trim(),
                 category: formData.get('category')?.toString().trim(),
-                image: formData.get('image')?.toString().trim()
+                image: formData.get('image')?.toString().trim(),
+                adminApiKey: formData.get('adminApiKey')?.toString().trim()
             };
 
             if (!adminApiKey) {

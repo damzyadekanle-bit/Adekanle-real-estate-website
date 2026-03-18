@@ -75,27 +75,7 @@ function validateProperty(property) {
   return null;
 }
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
-});
-
-app.get('/api/properties', (_req, res) => {
-  db.all('SELECT * FROM properties ORDER BY datetime(createdAt) DESC', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to fetch properties.' });
-    }
-    res.json(rows);
-  });
-});
-
-app.post('/api/admin/properties', requireAdmin, (req, res) => {
-  const property = normalizeProperty(req.body);
-  const validationError = validateProperty(property);
-
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
-
+function insertProperty(property, res) {
   const query = `
     INSERT INTO properties (title, location, price, beds, baths, size, listingType, category, image)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -126,7 +106,34 @@ app.post('/api/admin/properties', requireAdmin, (req, res) => {
       res.status(201).json(row);
     });
   });
+}
+
+function createPropertyHandler(req, res) {
+  const property = normalizeProperty(req.body);
+  const validationError = validateProperty(property);
+
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
+  }
+
+  return insertProperty(property, res);
+}
+
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true });
 });
+
+app.get('/api/properties', (_req, res) => {
+  db.all('SELECT * FROM properties ORDER BY datetime(createdAt) DESC', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to fetch properties.' });
+    }
+    res.json(rows);
+  });
+});
+
+app.post('/api/properties', requireAdmin, createPropertyHandler);
+app.post('/api/admin/properties', requireAdmin, createPropertyHandler);
 
 app.put('/api/admin/properties/:id', requireAdmin, (req, res) => {
   const property = normalizeProperty(req.body);

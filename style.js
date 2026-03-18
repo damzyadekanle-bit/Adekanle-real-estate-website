@@ -1,10 +1,22 @@
 // Property Filtering
 document.addEventListener('DOMContentLoaded', function() {
     const propertiesGrid = document.querySelector('.properties-grid');
-    const API_BASE_URL = 'https://adekanle-real-estate-website.onrender.com';
-    const UPLOAD_ENDPOINT = `${API_BASE_URL}/upload-property`;
+    const addPropertyForm = document.getElementById('addPropertyForm');
+    const addPropertyStatus = document.getElementById('addPropertyStatus');
+    const adminListStatus = document.getElementById('adminListStatus');
+    const adminPropertiesList = document.getElementById('adminPropertiesList');
+    const API_BASE_URL = "https://adekanle-real-estate-website.onrender.com";
+    const UPLOAD_ENDPOINT = `${API_BASE_URL}/api/properties`;
     const PROPERTIES_ENDPOINT = `${API_BASE_URL}/api/properties`;
-    const ADMIN_API_KEY = 'Adekanle2993';
+    const ADMIN_UPDATE_ENDPOINT = `${API_BASE_URL}/api/admin/properties`;
+    const ADMIN_API_KEY_STORAGE_KEY = 'adekanle_admin_api_key';
+    function hideUploadNavLinks() {
+        document.querySelectorAll('.nav-links a').forEach((link) => {
+            if ((link.textContent || '').trim().toLowerCase() === 'upload property') {
+                link.remove();
+            }
+        });
+    }
 
     function createElement(tag, className, textContent) {
         const element = document.createElement(tag);
@@ -55,6 +67,164 @@ document.addEventListener('DOMContentLoaded', function() {
         card.append(imageWrap, details);
         return card;
     }
+
+    function setStatus(element, message, type = '') {
+        if (!element) return;
+        element.className = `form-status${type ? ` ${type}` : ''}`;
+        element.textContent = message;
+    }
+
+    function getAdminApiKey() {
+        if (!addPropertyForm) return '';
+        const input = addPropertyForm.querySelector('input[name="adminApiKey"]');
+        return input ? input.value.trim() : '';
+    }
+
+    function cacheAdminKeyIfRequested(adminKey) {
+        if (!addPropertyForm || !adminKey) return;
+        const rememberField = addPropertyForm.querySelector('input[name="rememberAdminKey"]');
+        if (rememberField?.checked) {
+            localStorage.setItem(ADMIN_API_KEY_STORAGE_KEY, adminKey);
+            return;
+        }
+        localStorage.removeItem(ADMIN_API_KEY_STORAGE_KEY);
+    }
+
+    function prefillAdminApiKey() {
+        if (!addPropertyForm) return;
+        const savedKey = localStorage.getItem(ADMIN_API_KEY_STORAGE_KEY);
+        if (!savedKey) return;
+        const keyInput = addPropertyForm.querySelector('input[name="adminApiKey"]');
+        const rememberField = addPropertyForm.querySelector('input[name="rememberAdminKey"]');
+        if (keyInput) keyInput.value = savedKey;
+        if (rememberField) rememberField.checked = true;
+    }
+
+    function buildAdminPayloadFromPrompt(property) {
+        const title = window.prompt('Title', property.title || '');
+        if (title === null) return null;
+        const location = window.prompt('Location', property.location || '');
+        if (location === null) return null;
+        const price = window.prompt('Price', property.price || '');
+        if (price === null) return null;
+        const beds = window.prompt('Beds', property.beds ?? 0);
+        if (beds === null) return null;
+        const baths = window.prompt('Baths', property.baths ?? 0);
+        if (baths === null) return null;
+        const size = window.prompt('Size (sqft)', property.size || '');
+        if (size === null) return null;
+        const listingType = window.prompt('Listing Type (For Sale / For Rent / Commercial)', property.listingType || '');
+        if (listingType === null) return null;
+        const category = window.prompt('Category (house / apartment / commercial / land / joint-venture)', property.category || '');
+        if (category === null) return null;
+        const image = window.prompt('Image URL (optional)', property.image || '');
+        if (image === null) return null;
+
+        return { title, location, price, beds, baths, size, listingType, category, image };
+    }
+
+    function renderAdminProperties(properties) {
+        if (!adminPropertiesList) return;
+        adminPropertiesList.innerHTML = '';
+
+        if (!Array.isArray(properties) || properties.length === 0) {
+            adminPropertiesList.innerHTML = '<p class="admin-property-meta">No properties found yet.</p>';
+            return;
+        }
+
+        properties.forEach((property) => {
+            const item = createElement('div', 'admin-property-item');
+            const title = createElement('strong', '', property.title || 'Untitled Property');
+            const meta = createElement(
+                'p',
+                'admin-property-meta',
+                `${property.location || 'No location'} • ${property.price || 'No price'} • ${property.listingType || 'N/A'} • ${property.category || 'N/A'}`
+            );
+            const actions = createElement('div', 'admin-property-actions');
+            const editButton = createElement('button', 'btn-secondary', 'Edit');
+            editButton.type = 'button';
+            const deleteButton = createElement('button', 'btn-danger', 'Delete');
+            deleteButton.type = 'button';
+
+            editButton.addEventListener('click', async function() {
+                const adminApiKey = getAdminApiKey();
+                if (!adminApiKey) {
+                    setStatus(adminListStatus, 'Enter Admin API key above to edit properties.', 'error');
+                    return;
+                }
+
+                const updatedProperty = buildAdminPayloadFromPrompt(property);
+                if (!updatedProperty) return;
+
+                try {
+                    const response = await fetch(`${ADMIN_UPDATE_ENDPOINT}/${property.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-admin-api-key': adminApiKey
+                        },
+                        body: JSON.stringify(updatedProperty)
+                    });
+                    const responseBody = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(responseBody.error || 'Failed to update property.');
+                    }
+                    setStatus(adminListStatus, 'Property updated successfully.', 'success');
+                    await refreshAdminProperties();
+                    await loadPropertiesFromApi();
+                } catch (error) {
+                    setStatus(adminListStatus, error.message || 'Failed to update property.', 'error');
+                }
+            });
+
+            deleteButton.addEventListener('click', async function() {
+                const adminApiKey = getAdminApiKey();
+                if (!adminApiKey) {
+                    setStatus(adminListStatus, 'Enter Admin API key above to delete properties.', 'error');
+                    return;
+                }
+                const confirmed = window.confirm(`Delete "${property.title || 'this property'}"?`);
+                if (!confirmed) return;
+
+                try {
+                    const response = await fetch(`${ADMIN_UPDATE_ENDPOINT}/${property.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'x-admin-api-key': adminApiKey
+                        }
+                    });
+                    if (!response.ok) {
+                        const responseBody = await response.json().catch(() => ({}));
+                        throw new Error(responseBody.error || 'Failed to delete property.');
+                    }
+                    setStatus(adminListStatus, 'Property deleted successfully.', 'success');
+                    await refreshAdminProperties();
+                    await loadPropertiesFromApi();
+                } catch (error) {
+                    setStatus(adminListStatus, error.message || 'Failed to delete property.', 'error');
+                }
+            });
+
+            actions.append(editButton, deleteButton);
+            item.append(title, meta, actions);
+            adminPropertiesList.appendChild(item);
+        });
+    }
+
+    async function refreshAdminProperties() {
+        if (!adminPropertiesList) return;
+        try {
+            const response = await fetch(PROPERTIES_ENDPOINT);
+            if (!response.ok) {
+                throw new Error('Failed to load property list.');
+            }
+            const properties = await response.json();
+            renderAdminProperties(properties);
+        } catch (error) {
+            setStatus(adminListStatus, error.message || 'Unable to load properties.', 'error');
+        }
+    }
+
     async function loadPropertiesFromApi() {
         if (!propertiesGrid) return;
 
@@ -62,13 +232,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(PROPERTIES_ENDPOINT);
             if (!response.ok) return;
             const properties = await response.json();
-            properties.forEach(property => propertiesGrid.appendChild(createPropertyCard(property)));
+            propertiesGrid.querySelectorAll('[data-db-id]').forEach((node) => node.remove());
+            properties.slice().reverse().forEach((property) => propertiesGrid.prepend(createPropertyCard(property)));
         } catch (error) {
             // Keep static listings even if API is unavailable.
         }
     }
 
+    hideUploadNavLinks();
+    prefillAdminApiKey();
     loadPropertiesFromApi();
+    refreshAdminProperties();
 
     // Filter properties
     const filterButtons = document.querySelectorAll('.filter-btn');
@@ -101,19 +275,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Add property form (admin API)
-    const addPropertyForm = document.getElementById('addPropertyForm');
-    const addPropertyStatus = document.getElementById('addPropertyStatus');
-
     if (addPropertyForm) {
         addPropertyForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-
-            if (addPropertyStatus) {
-                addPropertyStatus.className = 'form-status';
-                addPropertyStatus.textContent = 'Uploading property...';
-            }
+            setStatus(addPropertyStatus, 'Uploading property...');
 
             const formData = new FormData(addPropertyForm);
+            const adminApiKey = formData.get('adminApiKey')?.toString().trim();
             const property = {
                 title: formData.get('title')?.toString().trim(),
                 location: formData.get('location')?.toString().trim(),
@@ -126,14 +294,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 image: formData.get('image')?.toString().trim()
             };
 
+            if (!adminApiKey) {
+                setStatus(addPropertyStatus, 'Admin API key is required.', 'error');
+                return;
+            }
+
             try {
                 const response = await fetch(UPLOAD_ENDPOINT, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-admin-api-key': ADMIN_API_KEY
+                        'x-admin-api-key': adminApiKey
                     },
-                    body: JSON.stringify(property)
+                    body: JSON.stringify({
+                        title: property.title,
+                        location: property.location,
+                        price: property.price,
+                        beds: property.beds,
+                        baths: property.baths,
+                        size: property.size,
+                        listingType: property.listingType,
+                        category: property.category,
+                        image: property.image
+                    })
                 });
 
                 const body = await response.json().catch(() => ({}));
@@ -149,18 +332,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (propertiesGrid) {
-                    propertiesGrid.appendChild(createPropertyCard(body));
+                    propertiesGrid.prepend(createPropertyCard(body));
                 }
+                cacheAdminKeyIfRequested(adminApiKey);
                 addPropertyForm.reset();
-                if (addPropertyStatus) {
-                    addPropertyStatus.className = 'form-status success';
-                    addPropertyStatus.textContent = 'Property uploaded and saved to the database.';
-                }
+                prefillAdminApiKey();
+                setStatus(addPropertyStatus, 'Property uploaded and saved to the database.', 'success');
+                setStatus(adminListStatus, 'Property list refreshed.', 'success');
+                await refreshAdminProperties();
             } catch (error) {
-                if (addPropertyStatus) {
-                    addPropertyStatus.className = 'form-status error';
-                    addPropertyStatus.textContent = error.message || 'Failed to upload property.';
-                }
+                setStatus(addPropertyStatus, error.message || 'Failed to upload property.', 'error');
             }
         });
     }

@@ -58,4 +58,5 @@ curl -X POST http://localhost:3000/api/properties \
   ADMIN_API_KEY='your-strong-admin-key' npm start
   ```
 - `Unauthorized: admin API key is incorrect...`: the key typed in the form must exactly match server `ADMIN_API_KEY`.
+- Admin upload page now requires entering the API key in the form (it is no longer hardcoded in frontend JavaScript).
 - `Validation failed...`: ensure title, location, price, listing type, and category are provided.

@@ -402,7 +402,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 size: formData.get('size')?.toString().trim(),
                 listingType: formData.get('listingType')?.toString().trim(),
                 category: formData.get('category')?.toString().trim(),
-                image: formData.get('image')?.toString().trim()
+                image: formData.get('image')?.toString().trim(),
+                adminApiKey: formData.get('adminApiKey')?.toString().trim()
             };
             const imageFile = addPropertyForm.querySelector('input[name="imageFile"]')?.files?.[0];
             let imageData = '';
@@ -417,6 +418,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!adminApiKey && !getSessionToken()) {
                 setStatus(addPropertyStatus, 'Login first or enter Admin API key.', 'error');
+                return;
+            }
+
+            if (!adminApiKey) {
+                setStatus(addPropertyStatus, 'Admin API key is required.', 'error');
                 return;
             }
 

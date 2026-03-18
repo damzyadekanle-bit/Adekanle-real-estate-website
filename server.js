@@ -75,6 +75,50 @@ function validateProperty(property) {
   return null;
 }
 
+function insertProperty(property, res) {
+  const query = `
+    INSERT INTO properties (title, location, price, beds, baths, size, listingType, category, image)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  const values = [
+    property.title,
+    property.location,
+    property.price,
+    property.beds,
+    property.baths,
+    property.size,
+    property.listingType,
+    property.category,
+    property.image
+  ];
+
+  db.run(query, values, function insertCallback(err) {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to create property.' });
+    }
+
+    db.get('SELECT * FROM properties WHERE id = ?', [this.lastID], (selectErr, row) => {
+      if (selectErr) {
+        return res.status(500).json({ error: 'Property created, but failed to fetch record.' });
+      }
+
+      res.status(201).json(row);
+    });
+  });
+}
+
+function createPropertyHandler(req, res) {
+  const property = normalizeProperty(req.body);
+  const validationError = validateProperty(property);
+
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
+  }
+
+  return insertProperty(property, res);
+}
+
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
@@ -88,85 +132,8 @@ app.get('/api/properties', (_req, res) => {
   });
 });
 
-app.post('/api/properties', requireAdmin, (req, res) => {
-  const property = normalizeProperty(req.body);
-  const validationError = validateProperty(property);
-
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
-
-  const query = `
-    INSERT INTO properties (title, location, price, beds, baths, size, listingType, category, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  const values = [
-    property.title,
-    property.location,
-    property.price,
-    property.beds,
-    property.baths,
-    property.size,
-    property.listingType,
-    property.category,
-    property.image
-  ];
-
-  db.run(query, values, function insertCallback(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to create property.' });
-    }
-
-    db.get('SELECT * FROM properties WHERE id = ?', [this.lastID], (selectErr, row) => {
-      if (selectErr) {
-        return res.status(500).json({ error: 'Property created, but failed to fetch record.' });
-      }
-
-      res.status(201).json(row);
-    });
-  });
-});
-
-app.post('/api/admin/properties', requireAdmin, (req, res) => {
-  const property = normalizeProperty(req.body);
-  const validationError = validateProperty(property);
-
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
-
-  const query = `
-    INSERT INTO properties (title, location, price, beds, baths, size, listingType, category, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  const values = [
-    property.title,
-    property.location,
-    property.price,
-    property.beds,
-    property.baths,
-    property.size,
-    property.listingType,
-    property.category,
-    property.image
-  ];
-
-  db.run(query, values, function insertCallback(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to create property.' });
-    }
-
-    db.get('SELECT * FROM properties WHERE id = ?', [this.lastID], (selectErr, row) => {
-      if (selectErr) {
-        return res.status(500).json({ error: 'Property created, but failed to fetch record.' });
-      }
-
-      res.status(201).json(row);
-    });
-  });
-});
+app.post('/api/properties', requireAdmin, createPropertyHandler);
+app.post('/api/admin/properties', requireAdmin, createPropertyHandler);
 
 app.put('/api/admin/properties/:id', requireAdmin, (req, res) => {
   const property = normalizeProperty(req.body);

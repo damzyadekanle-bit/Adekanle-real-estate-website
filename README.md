@@ -10,6 +10,13 @@
    ```bash
    export ADMIN_API_KEY='your-strong-admin-key'
    ```
+   Optional login credentials for role-based sessions:
+   ```bash
+   export ADMIN_USERNAME='admin'
+   export ADMIN_PASSWORD='admin123'
+   export EDITOR_USERNAME='editor'
+   export EDITOR_PASSWORD='editor123'
+   ```
 3. Start server:
    ```bash
    npm start
@@ -25,7 +32,10 @@ The SQLite database file is created automatically at `data.db`.
 - `GET /api/health`
 - `GET /api/properties`
 
-### Admin (requires `x-admin-api-key` header)
+### Admin (requires Bearer session token or `x-admin-api-key`)
+- `POST /api/admin/login` (returns bearer session token with role)
+- `GET /api/admin/me`
+- `POST /api/admin/logout`
 - `POST /api/properties`
 - `POST /api/admin/properties` (legacy alias)
 - `PUT /api/admin/properties/:id`
@@ -57,8 +67,13 @@ curl -X POST http://localhost:3000/api/properties \
   npm install
   ADMIN_API_KEY='your-strong-admin-key' npm start
   ```
-- `Unauthorized: admin API key is incorrect...`: the key typed in the form must exactly match server `ADMIN_API_KEY`.
-- Admin upload page now requires entering the API key in the form (it is no longer hardcoded in frontend JavaScript).
-- On `upload.html`, you can optionally tick **Remember admin key on this device** to avoid retyping the key each time.
-- The admin page now includes a **Manage Uploaded Properties** panel for quick edit/delete actions.
+- `Unauthorized...`: either login through the admin login panel, or use a valid `x-admin-api-key`.
+- Admin role model:
+  - `admin`: create/update/delete
+  - `editor`: create/update
+- Upload form supports either:
+  - image URL, or
+  - direct image file upload (saved under `/images/uploads`)
+- On `upload.html`, you can optionally tick **Remember admin key on this device** if using legacy key mode.
+- The admin page includes a **Manage Uploaded Properties** panel for quick edit/delete actions.
 - `Validation failed...`: ensure title, location, price, listing type, and category are provided.

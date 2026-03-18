@@ -5,11 +5,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const addPropertyStatus = document.getElementById('addPropertyStatus');
     const adminListStatus = document.getElementById('adminListStatus');
     const adminPropertiesList = document.getElementById('adminPropertiesList');
+    const adminLoginForm = document.getElementById('adminLoginForm');
+    const adminLoginStatus = document.getElementById('adminLoginStatus');
+    const adminAuthInfo = document.getElementById('adminAuthInfo');
     const API_BASE_URL = "https://adekanle-real-estate-website.onrender.com";
     const UPLOAD_ENDPOINT = `${API_BASE_URL}/api/properties`;
     const PROPERTIES_ENDPOINT = `${API_BASE_URL}/api/properties`;
+    const ADMIN_LOGIN_ENDPOINT = `${API_BASE_URL}/api/admin/login`;
+    const ADMIN_ME_ENDPOINT = `${API_BASE_URL}/api/admin/me`;
+    const ADMIN_LOGOUT_ENDPOINT = `${API_BASE_URL}/api/admin/logout`;
     const ADMIN_UPDATE_ENDPOINT = `${API_BASE_URL}/api/admin/properties`;
     const ADMIN_API_KEY_STORAGE_KEY = 'adekanle_admin_api_key';
+    const ADMIN_SESSION_TOKEN_KEY = 'adekanle_admin_session_token';
+    const ADMIN_SESSION_USER_KEY = 'adekanle_admin_session_user';
     function hideUploadNavLinks() {
         document.querySelectorAll('.nav-links a').forEach((link) => {
             if ((link.textContent || '').trim().toLowerCase() === 'upload property') {
@@ -80,6 +88,68 @@ document.addEventListener('DOMContentLoaded', function() {
         return input ? input.value.trim() : '';
     }
 
+    function getSessionToken() {
+        return sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY) || '';
+    }
+
+    function setSession(token, userInfo = '') {
+        if (!token) {
+            sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+            sessionStorage.removeItem(ADMIN_SESSION_USER_KEY);
+            return;
+        }
+        sessionStorage.setItem(ADMIN_SESSION_TOKEN_KEY, token);
+        sessionStorage.setItem(ADMIN_SESSION_USER_KEY, userInfo);
+    }
+
+    function getAuthHeaders({ includeJson = false } = {}) {
+        const headers = {};
+        if (includeJson) headers['Content-Type'] = 'application/json';
+        const token = getSessionToken();
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+            return headers;
+        }
+        const adminApiKey = getAdminApiKey();
+        if (adminApiKey) headers['x-admin-api-key'] = adminApiKey;
+        return headers;
+    }
+
+    function updateAuthInfoBanner(message = '') {
+        if (!adminAuthInfo) return;
+        adminAuthInfo.textContent = message;
+    }
+
+    async function validateExistingSession() {
+        const token = getSessionToken();
+        if (!token) return;
+        try {
+            const response = await fetch(ADMIN_ME_ENDPOINT, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                setSession('');
+                updateAuthInfoBanner('Session expired. Login again.');
+                return;
+            }
+            const me = await response.json();
+            updateAuthInfoBanner(`Logged in as ${me.username} (${me.role})`);
+        } catch (_error) {
+            updateAuthInfoBanner('Could not validate admin session right now.');
+        }
+    }
+
+    async function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('Could not read image file.'));
+            reader.readAsDataURL(file);
+        });
+    }
+
     function cacheAdminKeyIfRequested(adminKey) {
         if (!addPropertyForm || !adminKey) return;
         const rememberField = addPropertyForm.querySelector('input[name="rememberAdminKey"]');
@@ -147,9 +217,8 @@ document.addEventListener('DOMContentLoaded', function() {
             deleteButton.type = 'button';
 
             editButton.addEventListener('click', async function() {
-                const adminApiKey = getAdminApiKey();
-                if (!adminApiKey) {
-                    setStatus(adminListStatus, 'Enter Admin API key above to edit properties.', 'error');
+                if (!getSessionToken() && !getAdminApiKey()) {
+                    setStatus(adminListStatus, 'Login first or enter Admin API key to edit properties.', 'error');
                     return;
                 }
 
@@ -159,10 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     const response = await fetch(`${ADMIN_UPDATE_ENDPOINT}/${property.id}`, {
                         method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-admin-api-key': adminApiKey
-                        },
+                        headers: getAuthHeaders({ includeJson: true }),
                         body: JSON.stringify(updatedProperty)
                     });
                     const responseBody = await response.json().catch(() => ({}));
@@ -178,9 +244,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             deleteButton.addEventListener('click', async function() {
-                const adminApiKey = getAdminApiKey();
-                if (!adminApiKey) {
-                    setStatus(adminListStatus, 'Enter Admin API key above to delete properties.', 'error');
+                if (!getSessionToken() && !getAdminApiKey()) {
+                    setStatus(adminListStatus, 'Login first or enter Admin API key to delete properties.', 'error');
                     return;
                 }
                 const confirmed = window.confirm(`Delete "${property.title || 'this property'}"?`);
@@ -189,9 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     const response = await fetch(`${ADMIN_UPDATE_ENDPOINT}/${property.id}`, {
                         method: 'DELETE',
-                        headers: {
-                            'x-admin-api-key': adminApiKey
-                        }
+                        headers: getAuthHeaders()
                     });
                     if (!response.ok) {
                         const responseBody = await response.json().catch(() => ({}));
@@ -241,6 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     hideUploadNavLinks();
     prefillAdminApiKey();
+    validateExistingSession();
     loadPropertiesFromApi();
     refreshAdminProperties();
 
@@ -275,6 +339,53 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Add property form (admin API)
+    if (adminLoginForm) {
+        adminLoginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            setStatus(adminLoginStatus, 'Signing in...');
+            const formData = new FormData(adminLoginForm);
+            const username = formData.get('username')?.toString().trim();
+            const password = formData.get('password')?.toString();
+
+            try {
+                const response = await fetch(ADMIN_LOGIN_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const body = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(body.error || 'Login failed.');
+                }
+                setSession(body.token, `${body.username} (${body.role})`);
+                setStatus(adminLoginStatus, 'Login successful.', 'success');
+                updateAuthInfoBanner(`Logged in as ${body.username} (${body.role})`);
+                adminLoginForm.reset();
+            } catch (error) {
+                setSession('');
+                setStatus(adminLoginStatus, error.message || 'Login failed.', 'error');
+            }
+        });
+    }
+
+    const logoutButton = document.getElementById('adminLogoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async function() {
+            try {
+                await fetch(ADMIN_LOGOUT_ENDPOINT, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+            } catch (_error) {
+                // Ignore network errors and clear local session anyway.
+            } finally {
+                setSession('');
+                updateAuthInfoBanner('Logged out.');
+                setStatus(adminLoginStatus, 'Logged out.', 'success');
+            }
+        });
+    }
+
     if (addPropertyForm) {
         addPropertyForm.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -294,6 +405,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 image: formData.get('image')?.toString().trim(),
                 adminApiKey: formData.get('adminApiKey')?.toString().trim()
             };
+            const imageFile = addPropertyForm.querySelector('input[name="imageFile"]')?.files?.[0];
+            let imageData = '';
+            if (imageFile) {
+                try {
+                    imageData = await fileToDataUrl(imageFile);
+                } catch (error) {
+                    setStatus(addPropertyStatus, error.message || 'Unable to read selected image.', 'error');
+                    return;
+                }
+            }
+
+            if (!adminApiKey && !getSessionToken()) {
+                setStatus(addPropertyStatus, 'Login first or enter Admin API key.', 'error');
+                return;
+            }
 
             if (!adminApiKey) {
                 setStatus(addPropertyStatus, 'Admin API key is required.', 'error');
@@ -303,10 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const response = await fetch(UPLOAD_ENDPOINT, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-api-key': adminApiKey
-                    },
+                    headers: getAuthHeaders({ includeJson: true }),
                     body: JSON.stringify({
                         title: property.title,
                         location: property.location,
@@ -316,7 +439,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         size: property.size,
                         listingType: property.listingType,
                         category: property.category,
-                        image: property.image
+                        image: property.image,
+                        imageData,
+                        imageName: imageFile?.name || ''
                     })
                 });
 
@@ -335,7 +460,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (propertiesGrid) {
                     propertiesGrid.prepend(createPropertyCard(body));
                 }
-                cacheAdminKeyIfRequested(adminApiKey);
+                if (adminApiKey) {
+                    cacheAdminKeyIfRequested(adminApiKey);
+                }
                 addPropertyForm.reset();
                 prefillAdminApiKey();
                 setStatus(addPropertyStatus, 'Property uploaded and saved to the database.', 'success');

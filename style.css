@@ -498,6 +498,11 @@ h2 {
     margin-top: 2rem;
 }
 
+.admin-auth-panel {
+    max-width: 760px;
+    margin: 0 auto 2rem;
+}
+
 .admin-subtitle {
     margin-bottom: 1rem;
 }

@@ -1,4 +1,6 @@
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
@@ -6,9 +8,21 @@ const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'change-me-admin-key';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const EDITOR_USERNAME = process.env.EDITOR_USERNAME || 'editor';
+const EDITOR_PASSWORD = process.env.EDITOR_PASSWORD || 'editor123';
+const SESSION_TTL_MS = Number(process.env.ADMIN_SESSION_TTL_MS || 1000 * 60 * 60 * 8);
 
 const dbPath = path.join(__dirname, 'data.db');
 const db = new sqlite3.Database(dbPath);
+const uploadsDir = path.join(__dirname, 'images', 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
+const adminSessions = new Map();
+const adminUsers = [
+  { username: ADMIN_USERNAME, password: ADMIN_PASSWORD, role: 'admin' },
+  { username: EDITOR_USERNAME, password: EDITOR_PASSWORD, role: 'editor' }
+];
 
 db.serialize(() => {
   db.run(`
@@ -35,11 +49,37 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.static(__dirname));
 
 function requireAdmin(req, res, next) {
-  const providedKey = req.header('x-admin-api-key');
-  if (!providedKey || providedKey !== ADMIN_API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized. Provide a valid x-admin-api-key.' });
+  const authHeader = req.header('authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const now = Date.now();
+
+  if (token) {
+    const session = adminSessions.get(token);
+    if (session && session.expiresAt > now) {
+      req.adminSession = session;
+      req.adminToken = token;
+      return next();
+    }
   }
-  next();
+
+  const providedKey = req.header('x-admin-api-key') || '';
+  if (providedKey && providedKey === ADMIN_API_KEY) {
+    req.adminSession = { username: 'legacy-api-key', role: 'admin' };
+    return next();
+  }
+  return res.status(401).json({ error: 'Unauthorized. Login or provide a valid admin credential.' });
+}
+
+function requireRole(allowedRoles = []) {
+  return (req, res, next) => {
+    requireAdmin(req, res, () => {
+      const role = req.adminSession?.role || 'viewer';
+      if (!allowedRoles.includes(role)) {
+        return res.status(403).json({ error: `Forbidden. Required role: ${allowedRoles.join(' or ')}` });
+      }
+      return next();
+    });
+  };
 }
 
 function normalizeProperty(input = {}) {
@@ -52,8 +92,34 @@ function normalizeProperty(input = {}) {
     size: String(input.size || '').trim(),
     listingType: String(input.listingType || '').trim(),
     category: String(input.category || '').trim(),
-    image: String(input.image || '').trim()
+    image: String(input.image || '').trim(),
+    imageData: String(input.imageData || '').trim(),
+    imageName: String(input.imageName || '').trim()
   };
+}
+
+function saveImageData(imageData, imageName = '') {
+  const match = imageData.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) {
+    return null;
+  }
+  const mime = match[1];
+  const base64Payload = match[2];
+  const extMap = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif'
+  };
+  const ext = extMap[mime] || 'png';
+  const safeBase = path
+    .basename(imageName || 'upload')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/\.[a-zA-Z0-9]+$/, '');
+  const filename = `${Date.now()}-${safeBase}.${ext}`;
+  const filePath = path.join(uploadsDir, filename);
+  fs.writeFileSync(filePath, Buffer.from(base64Payload, 'base64'));
+  return `/images/uploads/${filename}`;
 }
 
 function validateProperty(property) {
@@ -132,10 +198,68 @@ app.get('/api/properties', (_req, res) => {
   });
 });
 
-app.post('/api/properties', requireAdmin, createPropertyHandler);
-app.post('/api/admin/properties', requireAdmin, createPropertyHandler);
+app.post('/api/admin/login', (req, res) => {
+  const username = String(req.body?.username || '').trim();
+  const password = String(req.body?.password || '');
+  const user = adminUsers.find((candidate) => candidate.username === username && candidate.password === password);
 
-app.put('/api/admin/properties/:id', requireAdmin, (req, res) => {
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid admin credentials.' });
+  }
+
+  const token = crypto.randomBytes(24).toString('hex');
+  const expiresAt = Date.now() + SESSION_TTL_MS;
+  adminSessions.set(token, { username: user.username, role: user.role, expiresAt });
+
+  return res.json({
+    token,
+    role: user.role,
+    username: user.username,
+    expiresAt
+  });
+});
+
+app.get('/api/admin/me', requireAdmin, (req, res) => {
+  res.json({
+    username: req.adminSession?.username || 'unknown',
+    role: req.adminSession?.role || 'unknown'
+  });
+});
+
+app.post('/api/admin/logout', requireAdmin, (req, res) => {
+  if (req.adminToken) {
+    adminSessions.delete(req.adminToken);
+  }
+  res.status(204).send();
+});
+
+app.post('/api/properties', requireRole(['admin', 'editor']), (req, res) => {
+  const body = { ...req.body };
+  if (body.imageData) {
+    const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
+    if (!savedPath) {
+      return res.status(400).json({ error: 'Invalid imageData format. Use a valid base64 data URL.' });
+    }
+    body.image = savedPath;
+  }
+  req.body = body;
+  return createPropertyHandler(req, res);
+});
+
+app.post('/api/admin/properties', requireRole(['admin', 'editor']), (req, res) => {
+  const body = { ...req.body };
+  if (body.imageData) {
+    const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
+    if (!savedPath) {
+      return res.status(400).json({ error: 'Invalid imageData format. Use a valid base64 data URL.' });
+    }
+    body.image = savedPath;
+  }
+  req.body = body;
+  return createPropertyHandler(req, res);
+});
+
+app.put('/api/admin/properties/:id', requireRole(['admin', 'editor']), (req, res) => {
   const property = normalizeProperty(req.body);
   const validationError = validateProperty(property);
 
@@ -181,7 +305,7 @@ app.put('/api/admin/properties/:id', requireAdmin, (req, res) => {
   });
 });
 
-app.delete('/api/admin/properties/:id', requireAdmin, (req, res) => {
+app.delete('/api/admin/properties/:id', requireRole(['admin']), (req, res) => {
   db.run('DELETE FROM properties WHERE id = ?', [req.params.id], function deleteCallback(err) {
     if (err) {
       return res.status(500).json({ error: 'Failed to delete property.' });

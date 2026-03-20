@@ -74,6 +74,7 @@ curl -X POST http://localhost:3000/api/properties \
 - If uploads fail on a deployed domain, set one of:
   - `PUBLIC_BASE_URL` (e.g. `https://your-site.onrender.com`) or
   - `CORS_ALLOWLIST` including your deployment origin.
+- Static frontends hosted on `*.github.io` are allowed by default by CORS.
 - Admin role model:
   - `admin`: create/update/delete
   - `editor`: create/update

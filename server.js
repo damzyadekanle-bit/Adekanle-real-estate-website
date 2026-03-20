@@ -159,8 +159,10 @@ app.use(cors((req, callback) => {
     isAllowed = true;
   } else {
     try {
-      const originHost = new URL(origin).host;
-      isAllowed = Boolean(host) && originHost === host;
+      const parsedOrigin = new URL(origin);
+      const originHost = parsedOrigin.host;
+      const isGithubPagesOrigin = parsedOrigin.hostname.endsWith('.github.io');
+      isAllowed = isGithubPagesOrigin || (Boolean(host) && originHost === host);
     } catch (_error) {
       isAllowed = false;
     }

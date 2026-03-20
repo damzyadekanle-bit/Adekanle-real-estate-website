@@ -67,6 +67,17 @@ test('cors allows same-host origin even when not in explicit allowlist', async (
   assert.equal(response.headers.get('access-control-allow-origin'), baseUrl);
 });
 
+test('cors allows github pages origins for static frontend deployments', async () => {
+  const response = await fetch(`${baseUrl}/api/health`, {
+    headers: {
+      Origin: 'https://example.github.io'
+    }
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), 'https://example.github.io');
+});
+
 test('admin property update accepts imageData uploads', async () => {
   const authHeader = { 'x-admin-api-key': 'change-me-admin-key', 'Content-Type': 'application/json' };
 

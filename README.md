@@ -33,9 +33,6 @@ The SQLite database file is created automatically at `data.db`.
 - `GET /api/properties`
 
 ### Admin
-- `POST /api/admin/login` (optional session token flow for admin dashboard)
-- `GET /api/admin/me`
-- `POST /api/admin/logout`
 - `POST /api/properties` (**requires `x-admin-api-key`**)
 - `POST /api/admin/properties` (legacy alias, **requires `x-admin-api-key`**)
 - `PUT /api/admin/properties/:id` (**requires `x-admin-api-key`**)

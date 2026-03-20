@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="property-price"><strong>${property.price || 'Price on request'}</strong></div>
                     <p>Category: ${property.category || 'N/A'}</p>
+                    <p>${property.description || 'No additional description provided.'}</p>
                 </div>
             `;
 
@@ -64,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 '@context': 'https://schema.org',
                 '@type': 'RealEstateListing',
                 name: property.title,
-                description: `Property in ${property.location}`,
+                description: property.description || `Property in ${property.location}`,
                 url: window.location.href,
                 image: property.image,
                 offers: {

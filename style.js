@@ -427,6 +427,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (response.status === 400) {
                         throw new Error(body.error || 'Validation failed. Check required fields.');
                     }
+                    if (response.status === 503) {
+                        throw new Error('Upload service is starting up. Please retry in a few seconds.');
+                    }
                     throw new Error(body.error || 'Failed to upload property.');
                 }
 

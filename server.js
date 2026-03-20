@@ -129,9 +129,12 @@ async function initDb() {
   await runSql('UPDATE properties SET numericPrice = ? WHERE numericPrice IS NULL OR numericPrice = 0', [0]);
 }
 
-initDb().catch((error) => {
-  console.error('Database initialization failed', error);
-});
+const dbReadyPromise = initDb()
+  .then(() => true)
+  .catch((error) => {
+    console.error('Database initialization failed', error);
+    return false;
+  });
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -179,6 +182,18 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.static(__dirname));
+
+app.use(async (req, res, next) => {
+  if (!req.path.startsWith('/api') && req.path !== '/sitemap.xml') {
+    return next();
+  }
+
+  const dbReady = await dbReadyPromise;
+  if (!dbReady) {
+    return res.status(503).json({ error: 'Service temporarily unavailable. Database is not ready.' });
+  }
+  return next();
+});
 
 function requireAdmin(req, res, next) {
   const authHeader = req.header('authorization') || '';

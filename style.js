@@ -221,6 +221,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (baths === null) return null;
         const size = window.prompt('Size (sqft)', property.size || '');
         if (size === null) return null;
+        const description = window.prompt('Description (optional)', property.description || '');
+        if (description === null) return null;
         const listingType = window.prompt('Listing Type (For Sale / For Rent / Commercial)', property.listingType || '');
         if (listingType === null) return null;
         const category = window.prompt('Category (house / apartment / commercial / land / joint-venture)', property.category || '');
@@ -228,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const image = window.prompt('Image URL (optional)', property.image || '');
         if (image === null) return null;
 
-        return { title, location, price, beds, baths, size, listingType, category, image };
+        return { title, location, price, beds, baths, size, description, listingType, category, image };
     }
 
     function renderAdminProperties(properties) {
@@ -248,6 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 'admin-property-meta',
                 `${property.location || 'No location'} • ${property.price || 'No price'} • ${property.listingType || 'N/A'} • ${property.category || 'N/A'}`
             );
+            const description = createElement('p', 'admin-property-meta', property.description || 'No description provided.');
             const actions = createElement('div', 'admin-property-actions');
             const editButton = createElement('button', 'btn-secondary', 'Edit');
             editButton.type = 'button';
@@ -307,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             actions.append(editButton, deleteButton);
-            item.append(title, meta, actions);
+            item.append(title, meta, description, actions);
             adminPropertiesList.appendChild(item);
         });
     }
@@ -483,6 +486,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 beds: formData.get('beds')?.toString().trim(),
                 baths: formData.get('baths')?.toString().trim(),
                 size: formData.get('size')?.toString().trim(),
+                description: formData.get('description')?.toString().trim(),
                 listingType: formData.get('listingType')?.toString().trim(),
                 category: formData.get('category')?.toString().trim(),
                 image: formData.get('image')?.toString().trim()

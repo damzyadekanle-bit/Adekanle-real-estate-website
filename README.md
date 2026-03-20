@@ -53,6 +53,7 @@ curl -X POST http://localhost:3000/api/properties \
     "beds":4,
     "baths":5,
     "size":"3200",
+    "description":"Spacious waterfront duplex with modern finishing and ample parking.",
     "listingType":"For Sale",
     "category":"house",
     "image":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"

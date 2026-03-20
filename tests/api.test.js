@@ -69,6 +69,7 @@ test('admin property update accepts imageData uploads', async () => {
       beds: 3,
       baths: 2,
       size: '1200 sqft',
+      description: 'A bright home near schools and shops.',
       listingType: 'sale',
       category: 'residential',
       image: '/images/default.jpg'
@@ -88,6 +89,7 @@ test('admin property update accepts imageData uploads', async () => {
       beds: 3,
       baths: 2,
       size: '1250 sqft',
+      description: 'Updated open-plan layout with renovated kitchen.',
       listingType: 'sale',
       category: 'residential',
       imageData: `data:image/png;base64,${onePixelPngBase64}`,
@@ -98,4 +100,5 @@ test('admin property update accepts imageData uploads', async () => {
   assert.equal(updateResponse.status, 200);
   const updated = await updateResponse.json();
   assert.match(updated.image, /^\/images\/uploads\/\d+-updated-home\.png$/);
+  assert.equal(updated.description, 'Updated open-plan layout with renovated kitchen.');
 });

@@ -75,6 +75,7 @@ async function initDb() {
       beds INTEGER DEFAULT 0,
       baths INTEGER DEFAULT 0,
       size TEXT,
+      description TEXT,
       listingType TEXT NOT NULL,
       category TEXT NOT NULL,
       image TEXT,
@@ -86,6 +87,10 @@ async function initDb() {
   const hasNumericPrice = columns.some((column) => column.name === 'numericPrice');
   if (!hasNumericPrice) {
     await runSql('ALTER TABLE properties ADD COLUMN numericPrice REAL DEFAULT 0');
+  }
+  const hasDescription = columns.some((column) => column.name === 'description');
+  if (!hasDescription) {
+    await runSql('ALTER TABLE properties ADD COLUMN description TEXT');
   }
 
   await runSql(`
@@ -218,6 +223,7 @@ function normalizeProperty(input = {}) {
     beds: Number(input.beds || 0),
     baths: Number(input.baths || 0),
     size: String(input.size || '').trim(),
+    description: String(input.description || '').trim(),
     listingType: String(input.listingType || '').trim(),
     category: String(input.category || '').trim(),
     image: String(input.image || '').trim(),
@@ -489,8 +495,8 @@ function createPropertyHandler(req, res) {
   }
 
   const query = `
-    INSERT INTO properties (title, location, price, numericPrice, beds, baths, size, listingType, category, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO properties (title, location, price, numericPrice, beds, baths, size, description, listingType, category, image)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -501,6 +507,7 @@ function createPropertyHandler(req, res) {
     property.beds,
     property.baths,
     property.size,
+    property.description,
     property.listingType,
     property.category,
     property.image
@@ -566,7 +573,7 @@ app.put('/api/admin/properties/:id', requireAdminApiKey, (req, res) => {
 
   const query = `
     UPDATE properties
-    SET title = ?, location = ?, price = ?, numericPrice = ?, beds = ?, baths = ?, size = ?, listingType = ?, category = ?, image = ?
+    SET title = ?, location = ?, price = ?, numericPrice = ?, beds = ?, baths = ?, size = ?, description = ?, listingType = ?, category = ?, image = ?
     WHERE id = ?
   `;
 
@@ -578,6 +585,7 @@ app.put('/api/admin/properties/:id', requireAdminApiKey, (req, res) => {
     property.beds,
     property.baths,
     property.size,
+    property.description,
     property.listingType,
     property.category,
     property.image,

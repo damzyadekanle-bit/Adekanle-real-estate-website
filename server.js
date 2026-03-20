@@ -147,14 +147,30 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (CORS_ALLOWLIST.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-api-key']
+app.use(cors((req, callback) => {
+  const origin = req.header('origin') || '';
+  const forwardedHost = String(req.header('x-forwarded-host') || '').split(',')[0].trim();
+  const host = forwardedHost || String(req.header('host') || '').trim();
+  let isAllowed = false;
+
+  if (!origin) {
+    isAllowed = true;
+  } else if (CORS_ALLOWLIST.includes(origin)) {
+    isAllowed = true;
+  } else {
+    try {
+      const originHost = new URL(origin).host;
+      isAllowed = Boolean(host) && originHost === host;
+    } catch (_error) {
+      isAllowed = false;
+    }
+  }
+
+  callback(null, {
+    origin: isAllowed,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-api-key']
+  });
 }));
 
 app.use((req, res, next) => {

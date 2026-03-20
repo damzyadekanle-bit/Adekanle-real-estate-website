@@ -56,6 +56,17 @@ test('inquiries endpoint validates required fields', async () => {
   assert.equal(response.status, 400);
 });
 
+test('cors allows same-host origin even when not in explicit allowlist', async () => {
+  const response = await fetch(`${baseUrl}/api/health`, {
+    headers: {
+      Origin: baseUrl
+    }
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), baseUrl);
+});
+
 test('admin property update accepts imageData uploads', async () => {
   const authHeader = { 'x-admin-api-key': 'change-me-admin-key', 'Content-Type': 'application/json' };
 

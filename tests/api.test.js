@@ -57,14 +57,7 @@ test('inquiries endpoint validates required fields', async () => {
 });
 
 test('admin property update accepts imageData uploads', async () => {
-  const loginResponse = await fetch(`${baseUrl}/api/admin/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'admin123' })
-  });
-  assert.equal(loginResponse.status, 200);
-  const loginBody = await loginResponse.json();
-  const authHeader = { Authorization: `Bearer ${loginBody.token}`, 'Content-Type': 'application/json' };
+  const authHeader = { 'x-admin-api-key': 'change-me-admin-key', 'Content-Type': 'application/json' };
 
   const createResponse = await fetch(`${baseUrl}/api/admin/properties`, {
     method: 'POST',
@@ -76,6 +69,7 @@ test('admin property update accepts imageData uploads', async () => {
       beds: 3,
       baths: 2,
       size: '1200 sqft',
+      description: 'A bright home near schools and shops.',
       listingType: 'sale',
       category: 'residential',
       image: '/images/default.jpg'
@@ -95,6 +89,7 @@ test('admin property update accepts imageData uploads', async () => {
       beds: 3,
       baths: 2,
       size: '1250 sqft',
+      description: 'Updated open-plan layout with renovated kitchen.',
       listingType: 'sale',
       category: 'residential',
       imageData: `data:image/png;base64,${onePixelPngBase64}`,
@@ -105,4 +100,5 @@ test('admin property update accepts imageData uploads', async () => {
   assert.equal(updateResponse.status, 200);
   const updated = await updateResponse.json();
   assert.match(updated.image, /^\/images\/uploads\/\d+-updated-home\.png$/);
+  assert.equal(updated.description, 'Updated open-plan layout with renovated kitchen.');
 });

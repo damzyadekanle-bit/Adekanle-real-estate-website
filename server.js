@@ -13,7 +13,15 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const EDITOR_USERNAME = process.env.EDITOR_USERNAME || 'editor';
 const EDITOR_PASSWORD = process.env.EDITOR_PASSWORD || 'editor123';
 const SESSION_TTL_MS = Number(process.env.ADMIN_SESSION_TTL_MS || 1000 * 60 * 60 * 8);
-const CORS_ALLOWLIST = String(process.env.CORS_ALLOWLIST || 'http://localhost:3000,http://127.0.0.1:3000')
+const defaultCorsOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+if (process.env.PUBLIC_BASE_URL) {
+  try {
+    defaultCorsOrigins.push(new URL(process.env.PUBLIC_BASE_URL).origin);
+  } catch (_error) {
+    // Ignore malformed PUBLIC_BASE_URL and continue with defaults.
+  }
+}
+const CORS_ALLOWLIST = String(process.env.CORS_ALLOWLIST || defaultCorsOrigins.join(','))
   .split(',')
   .map((entry) => entry.trim())
   .filter(Boolean);
@@ -75,6 +83,7 @@ async function initDb() {
       beds INTEGER DEFAULT 0,
       baths INTEGER DEFAULT 0,
       size TEXT,
+      description TEXT,
       listingType TEXT NOT NULL,
       category TEXT NOT NULL,
       image TEXT,
@@ -86,6 +95,10 @@ async function initDb() {
   const hasNumericPrice = columns.some((column) => column.name === 'numericPrice');
   if (!hasNumericPrice) {
     await runSql('ALTER TABLE properties ADD COLUMN numericPrice REAL DEFAULT 0');
+  }
+  const hasDescription = columns.some((column) => column.name === 'description');
+  if (!hasDescription) {
+    await runSql('ALTER TABLE properties ADD COLUMN description TEXT');
   }
 
   await runSql(`
@@ -116,9 +129,12 @@ async function initDb() {
   await runSql('UPDATE properties SET numericPrice = ? WHERE numericPrice IS NULL OR numericPrice = 0', [0]);
 }
 
-initDb().catch((error) => {
-  console.error('Database initialization failed', error);
-});
+const dbReadyPromise = initDb()
+  .then(() => true)
+  .catch((error) => {
+    console.error('Database initialization failed', error);
+    return false;
+  });
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -131,14 +147,30 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (CORS_ALLOWLIST.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-api-key']
+app.use(cors((req, callback) => {
+  const origin = req.header('origin') || '';
+  const forwardedHost = String(req.header('x-forwarded-host') || '').split(',')[0].trim();
+  const host = forwardedHost || String(req.header('host') || '').trim();
+  let isAllowed = false;
+
+  if (!origin) {
+    isAllowed = true;
+  } else if (CORS_ALLOWLIST.includes(origin)) {
+    isAllowed = true;
+  } else {
+    try {
+      const originHost = new URL(origin).host;
+      isAllowed = Boolean(host) && originHost === host;
+    } catch (_error) {
+      isAllowed = false;
+    }
+  }
+
+  callback(null, {
+    origin: isAllowed,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-api-key']
+  });
 }));
 
 app.use((req, res, next) => {
@@ -166,6 +198,18 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.static(__dirname));
+
+app.use(async (req, res, next) => {
+  if (!req.path.startsWith('/api') && req.path !== '/sitemap.xml') {
+    return next();
+  }
+
+  const dbReady = await dbReadyPromise;
+  if (!dbReady) {
+    return res.status(503).json({ error: 'Service temporarily unavailable. Database is not ready.' });
+  }
+  return next();
+});
 
 function requireAdmin(req, res, next) {
   const authHeader = req.header('authorization') || '';
@@ -201,6 +245,14 @@ function requireRole(allowedRoles = []) {
   };
 }
 
+function requireAdminApiKey(req, res, next) {
+  const providedKey = req.header('x-admin-api-key') || '';
+  if (!providedKey || providedKey !== ADMIN_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized. Provide a valid x-admin-api-key.' });
+  }
+  return next();
+}
+
 function normalizeProperty(input = {}) {
   return {
     title: String(input.title || '').trim(),
@@ -210,6 +262,7 @@ function normalizeProperty(input = {}) {
     beds: Number(input.beds || 0),
     baths: Number(input.baths || 0),
     size: String(input.size || '').trim(),
+    description: String(input.description || '').trim(),
     listingType: String(input.listingType || '').trim(),
     category: String(input.category || '').trim(),
     image: String(input.image || '').trim(),
@@ -481,8 +534,8 @@ function createPropertyHandler(req, res) {
   }
 
   const query = `
-    INSERT INTO properties (title, location, price, numericPrice, beds, baths, size, listingType, category, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO properties (title, location, price, numericPrice, beds, baths, size, description, listingType, category, image)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -493,6 +546,7 @@ function createPropertyHandler(req, res) {
     property.beds,
     property.baths,
     property.size,
+    property.description,
     property.listingType,
     property.category,
     property.image
@@ -513,7 +567,7 @@ function createPropertyHandler(req, res) {
   });
 }
 
-app.post('/api/properties', requireRole(['admin', 'editor']), (req, res) => {
+app.post('/api/properties', requireAdminApiKey, (req, res) => {
   const body = { ...req.body };
   if (body.imageData) {
     const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
@@ -526,7 +580,7 @@ app.post('/api/properties', requireRole(['admin', 'editor']), (req, res) => {
   return createPropertyHandler(req, res);
 });
 
-app.post('/api/admin/properties', requireRole(['admin', 'editor']), (req, res) => {
+app.post('/api/admin/properties', requireAdminApiKey, (req, res) => {
   const body = { ...req.body };
   if (body.imageData) {
     const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
@@ -539,8 +593,17 @@ app.post('/api/admin/properties', requireRole(['admin', 'editor']), (req, res) =
   return createPropertyHandler(req, res);
 });
 
-app.put('/api/admin/properties/:id', requireRole(['admin', 'editor']), (req, res) => {
-  const property = normalizeProperty(req.body);
+app.put('/api/admin/properties/:id', requireAdminApiKey, (req, res) => {
+  const body = { ...req.body };
+  if (body.imageData) {
+    const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
+    if (!savedPath) {
+      return res.status(400).json({ error: 'Invalid imageData format. Use a valid base64 data URL.' });
+    }
+    body.image = savedPath;
+  }
+
+  const property = normalizeProperty(body);
   const validationError = validateProperty(property);
 
   if (validationError) {
@@ -549,7 +612,7 @@ app.put('/api/admin/properties/:id', requireRole(['admin', 'editor']), (req, res
 
   const query = `
     UPDATE properties
-    SET title = ?, location = ?, price = ?, numericPrice = ?, beds = ?, baths = ?, size = ?, listingType = ?, category = ?, image = ?
+    SET title = ?, location = ?, price = ?, numericPrice = ?, beds = ?, baths = ?, size = ?, description = ?, listingType = ?, category = ?, image = ?
     WHERE id = ?
   `;
 
@@ -561,6 +624,7 @@ app.put('/api/admin/properties/:id', requireRole(['admin', 'editor']), (req, res
     property.beds,
     property.baths,
     property.size,
+    property.description,
     property.listingType,
     property.category,
     property.image,
@@ -586,7 +650,7 @@ app.put('/api/admin/properties/:id', requireRole(['admin', 'editor']), (req, res
   });
 });
 
-app.delete('/api/admin/properties/:id', requireRole(['admin']), (req, res) => {
+app.delete('/api/admin/properties/:id', requireAdminApiKey, (req, res) => {
   db.run('DELETE FROM properties WHERE id = ?', [req.params.id], function deleteCallback(err) {
     if (err) {
       return res.status(500).json({ error: 'Failed to delete property.' });

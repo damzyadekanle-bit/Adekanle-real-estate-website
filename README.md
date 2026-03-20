@@ -65,7 +65,10 @@ curl -X POST http://localhost:3000/api/properties \
   npm install
   ADMIN_API_KEY='your-strong-admin-key' npm start
   ```
-- `Unauthorized...`: either login through the admin login panel, or use a valid `x-admin-api-key`.
+- `Unauthorized...`: use a valid `x-admin-api-key` value that matches `ADMIN_API_KEY`.
+- If uploads fail on a deployed domain, set one of:
+  - `PUBLIC_BASE_URL` (e.g. `https://your-site.onrender.com`) or
+  - `CORS_ALLOWLIST` including your deployment origin.
 - Admin role model:
   - `admin`: create/update/delete
   - `editor`: create/update

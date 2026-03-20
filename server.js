@@ -13,7 +13,15 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const EDITOR_USERNAME = process.env.EDITOR_USERNAME || 'editor';
 const EDITOR_PASSWORD = process.env.EDITOR_PASSWORD || 'editor123';
 const SESSION_TTL_MS = Number(process.env.ADMIN_SESSION_TTL_MS || 1000 * 60 * 60 * 8);
-const CORS_ALLOWLIST = String(process.env.CORS_ALLOWLIST || 'http://localhost:3000,http://127.0.0.1:3000')
+const defaultCorsOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+if (process.env.PUBLIC_BASE_URL) {
+  try {
+    defaultCorsOrigins.push(new URL(process.env.PUBLIC_BASE_URL).origin);
+  } catch (_error) {
+    // Ignore malformed PUBLIC_BASE_URL and continue with defaults.
+  }
+}
+const CORS_ALLOWLIST = String(process.env.CORS_ALLOWLIST || defaultCorsOrigins.join(','))
   .split(',')
   .map((entry) => entry.trim())
   .filter(Boolean);

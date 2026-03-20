@@ -488,10 +488,19 @@ h2 {
 
 .remember-key label {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 0.5rem;
     color: var(--gray);
     font-size: 0.95rem;
+}
+
+.remember-key input[type="checkbox"] {
+    width: auto;
+    min-width: auto;
+    padding: 0;
+    margin-top: 0.2rem;
+    flex: 0 0 auto;
 }
 
 .admin-list-panel {

@@ -1,9 +1,27 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const API_BASE_URL = window.location.origin;
+    const configuredApiBaseUrl = document.querySelector('meta[name="api-base-url"]')?.content?.trim() || window.API_BASE_URL || '';
+    const isGithubPagesHost = /github\.io$/i.test(window.location.hostname);
+    const API_BASE_URL = configuredApiBaseUrl || (isGithubPagesHost ? 'https://adekanle-real-estate-website.onrender.com' : window.location.origin);
     const propertyId = new URLSearchParams(window.location.search).get('id');
     const detailContainer = document.getElementById('propertyDetail');
     const inquiryForm = document.getElementById('propertyInquiryForm');
     const inquiryStatus = document.getElementById('propertyInquiryStatus');
+
+    function formatPrice(price) {
+        const value = String(price || '').trim();
+        if (!value) return 'Price on request';
+        if (value.includes('₦')) return value;
+        if (/^\$/.test(value)) return `₦${value.slice(1)}`;
+        if (/[€£¥]/.test(value)) return value;
+        return `₦${value}`;
+    }
+
+    function resolveImageUrl(imagePath) {
+        const value = String(imagePath || '').trim();
+        if (!value) return 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80';
+        if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value;
+        return `${API_BASE_URL}${value.startsWith('/') ? value : `/${value}`}`;
+    }
 
     function setInquiryStatus(message, type = '') {
         if (!inquiryStatus) return;
@@ -44,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             detailContainer.innerHTML = `
                 <div class="property-image">
-                    <img src="${property.image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80'}" alt="${property.title}">
+                    <img src="${resolveImageUrl(property.image)}" alt="${property.title}">
                     <span class="property-type">${property.listingType || 'For Sale'}</span>
                 </div>
                 <div class="property-details">
@@ -55,8 +73,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span><i class="fas fa-bath"></i> ${property.baths || 0} Baths</span>
                         <span><i class="fas fa-ruler-combined"></i> ${property.size || 'N/A'} sqft</span>
                     </div>
-                    <div class="property-price"><strong>${property.price || 'Price on request'}</strong></div>
+                    <div class="property-price"><strong>${formatPrice(property.price)}</strong></div>
                     <p>Category: ${property.category || 'N/A'}</p>
+                    <p>${property.description || 'No additional description provided.'}</p>
                 </div>
             `;
 
@@ -64,12 +83,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 '@context': 'https://schema.org',
                 '@type': 'RealEstateListing',
                 name: property.title,
-                description: `Property in ${property.location}`,
+                description: property.description || `Property in ${property.location}`,
                 url: window.location.href,
-                image: property.image,
+                image: resolveImageUrl(property.image),
                 offers: {
                     '@type': 'Offer',
-                    priceCurrency: 'USD',
+                    priceCurrency: 'NGN',
                     price: property.numericPrice || 0
                 }
             };

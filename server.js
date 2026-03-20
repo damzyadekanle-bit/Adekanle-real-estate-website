@@ -540,7 +540,16 @@ app.post('/api/admin/properties', requireRole(['admin', 'editor']), (req, res) =
 });
 
 app.put('/api/admin/properties/:id', requireRole(['admin', 'editor']), (req, res) => {
-  const property = normalizeProperty(req.body);
+  const body = { ...req.body };
+  if (body.imageData) {
+    const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
+    if (!savedPath) {
+      return res.status(400).json({ error: 'Invalid imageData format. Use a valid base64 data URL.' });
+    }
+    body.image = savedPath;
+  }
+
+  const property = normalizeProperty(body);
   const validationError = validateProperty(property);
 
   if (validationError) {

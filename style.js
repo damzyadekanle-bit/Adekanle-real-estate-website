@@ -77,6 +77,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return `₦${value}`;
     }
 
+    function resolveImageUrl(imagePath) {
+        const value = String(imagePath || '').trim();
+        if (!value) return 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+        if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value;
+        return `${API_BASE_URL}${value.startsWith('/') ? value : `/${value}`}`;
+    }
+
     function toPropertyDetailsUrl(property) {
         return `property.html?id=${encodeURIComponent(property.id)}`;
     }
@@ -88,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const imageWrap = createElement('div', 'property-image');
         const img = createElement('img');
-        img.src = property.image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+        img.src = resolveImageUrl(property.image);
         img.alt = property.title || 'Property image';
         imageWrap.appendChild(img);
 

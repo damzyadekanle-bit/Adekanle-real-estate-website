@@ -16,6 +16,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return `₦${value}`;
     }
 
+    function resolveImageUrl(imagePath) {
+        const value = String(imagePath || '').trim();
+        if (!value) return 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80';
+        if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value;
+        return `${API_BASE_URL}${value.startsWith('/') ? value : `/${value}`}`;
+    }
+
     function setInquiryStatus(message, type = '') {
         if (!inquiryStatus) return;
         inquiryStatus.className = `form-status${type ? ` ${type}` : ''}`;
@@ -55,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             detailContainer.innerHTML = `
                 <div class="property-image">
-                    <img src="${property.image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80'}" alt="${property.title}">
+                    <img src="${resolveImageUrl(property.image)}" alt="${property.title}">
                     <span class="property-type">${property.listingType || 'For Sale'}</span>
                 </div>
                 <div class="property-details">
@@ -78,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 name: property.title,
                 description: property.description || `Property in ${property.location}`,
                 url: window.location.href,
-                image: property.image,
+                image: resolveImageUrl(property.image),
                 offers: {
                     '@type': 'Offer',
                     priceCurrency: 'NGN',

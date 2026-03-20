@@ -26,20 +26,22 @@
 
 The SQLite database file is created automatically at `data.db`.
 
+For static deployments (e.g. GitHub Pages), frontend API calls automatically fall back to `https://adekanle-real-estate-website.onrender.com`. You can override this by setting a meta tag in your HTML:
+```html
+<meta name="api-base-url" content="https://your-backend.example.com">
+```
+
 ## API endpoints
 
 ### Public
 - `GET /api/health`
 - `GET /api/properties`
 
-### Admin (requires Bearer session token or `x-admin-api-key`)
-- `POST /api/admin/login` (returns bearer session token with role)
-- `GET /api/admin/me`
-- `POST /api/admin/logout`
-- `POST /api/properties`
-- `POST /api/admin/properties` (legacy alias)
-- `PUT /api/admin/properties/:id`
-- `DELETE /api/admin/properties/:id`
+### Admin
+- `POST /api/properties` (**requires `x-admin-api-key`**)
+- `POST /api/admin/properties` (legacy alias, **requires `x-admin-api-key`**)
+- `PUT /api/admin/properties/:id` (**requires `x-admin-api-key`**)
+- `DELETE /api/admin/properties/:id` (**requires `x-admin-api-key`**)
 
 ### Example admin upload
 ```bash
@@ -53,6 +55,7 @@ curl -X POST http://localhost:3000/api/properties \
     "beds":4,
     "baths":5,
     "size":"3200",
+    "description":"Spacious waterfront duplex with modern finishing and ample parking.",
     "listingType":"For Sale",
     "category":"house",
     "image":"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"
@@ -67,7 +70,11 @@ curl -X POST http://localhost:3000/api/properties \
   npm install
   ADMIN_API_KEY='your-strong-admin-key' npm start
   ```
-- `Unauthorized...`: either login through the admin login panel, or use a valid `x-admin-api-key`.
+- `Unauthorized...`: use a valid `x-admin-api-key` value that matches `ADMIN_API_KEY`.
+- If uploads fail on a deployed domain, set one of:
+  - `PUBLIC_BASE_URL` (e.g. `https://your-site.onrender.com`) or
+  - `CORS_ALLOWLIST` including your deployment origin.
+- Static frontends hosted on `*.github.io` are allowed by default by CORS.
 - Admin role model:
   - `admin`: create/update/delete
   - `editor`: create/update

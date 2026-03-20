@@ -32,14 +32,14 @@ The SQLite database file is created automatically at `data.db`.
 - `GET /api/health`
 - `GET /api/properties`
 
-### Admin (requires Bearer session token or `x-admin-api-key`)
-- `POST /api/admin/login` (returns bearer session token with role)
+### Admin
+- `POST /api/admin/login` (optional session token flow for admin dashboard)
 - `GET /api/admin/me`
 - `POST /api/admin/logout`
-- `POST /api/properties`
-- `POST /api/admin/properties` (legacy alias)
-- `PUT /api/admin/properties/:id`
-- `DELETE /api/admin/properties/:id`
+- `POST /api/properties` (**requires `x-admin-api-key`**)
+- `POST /api/admin/properties` (legacy alias, **requires `x-admin-api-key`**)
+- `PUT /api/admin/properties/:id` (**requires `x-admin-api-key`**)
+- `DELETE /api/admin/properties/:id` (**requires `x-admin-api-key`**)
 
 ### Example admin upload
 ```bash

@@ -201,6 +201,14 @@ function requireRole(allowedRoles = []) {
   };
 }
 
+function requireAdminApiKey(req, res, next) {
+  const providedKey = req.header('x-admin-api-key') || '';
+  if (!providedKey || providedKey !== ADMIN_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized. Provide a valid x-admin-api-key.' });
+  }
+  return next();
+}
+
 function normalizeProperty(input = {}) {
   return {
     title: String(input.title || '').trim(),
@@ -513,7 +521,7 @@ function createPropertyHandler(req, res) {
   });
 }
 
-app.post('/api/properties', requireRole(['admin', 'editor']), (req, res) => {
+app.post('/api/properties', requireAdminApiKey, (req, res) => {
   const body = { ...req.body };
   if (body.imageData) {
     const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
@@ -526,7 +534,7 @@ app.post('/api/properties', requireRole(['admin', 'editor']), (req, res) => {
   return createPropertyHandler(req, res);
 });
 
-app.post('/api/admin/properties', requireRole(['admin', 'editor']), (req, res) => {
+app.post('/api/admin/properties', requireAdminApiKey, (req, res) => {
   const body = { ...req.body };
   if (body.imageData) {
     const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
@@ -539,8 +547,17 @@ app.post('/api/admin/properties', requireRole(['admin', 'editor']), (req, res) =
   return createPropertyHandler(req, res);
 });
 
-app.put('/api/admin/properties/:id', requireRole(['admin', 'editor']), (req, res) => {
-  const property = normalizeProperty(req.body);
+app.put('/api/admin/properties/:id', requireAdminApiKey, (req, res) => {
+  const body = { ...req.body };
+  if (body.imageData) {
+    const savedPath = saveImageData(String(body.imageData), String(body.imageName || 'property-image'));
+    if (!savedPath) {
+      return res.status(400).json({ error: 'Invalid imageData format. Use a valid base64 data URL.' });
+    }
+    body.image = savedPath;
+  }
+
+  const property = normalizeProperty(body);
   const validationError = validateProperty(property);
 
   if (validationError) {
@@ -586,7 +603,7 @@ app.put('/api/admin/properties/:id', requireRole(['admin', 'editor']), (req, res
   });
 });
 
-app.delete('/api/admin/properties/:id', requireRole(['admin']), (req, res) => {
+app.delete('/api/admin/properties/:id', requireAdminApiKey, (req, res) => {
   db.run('DELETE FROM properties WHERE id = ?', [req.params.id], function deleteCallback(err) {
     if (err) {
       return res.status(500).json({ error: 'Failed to delete property.' });

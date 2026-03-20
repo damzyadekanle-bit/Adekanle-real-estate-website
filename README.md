@@ -26,6 +26,11 @@
 
 The SQLite database file is created automatically at `data.db`.
 
+For static deployments (e.g. GitHub Pages), frontend API calls automatically fall back to `https://adekanle-real-estate-website.onrender.com`. You can override this by setting a meta tag in your HTML:
+```html
+<meta name="api-base-url" content="https://your-backend.example.com">
+```
+
 ## API endpoints
 
 ### Public

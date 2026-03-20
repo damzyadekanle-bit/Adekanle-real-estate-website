@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const adminListStatus = document.getElementById('adminListStatus');
     const adminPropertiesList = document.getElementById('adminPropertiesList');
 
-    const API_BASE_URL = window.location.origin;
+    const configuredApiBaseUrl = document.querySelector('meta[name="api-base-url"]')?.content?.trim() || window.API_BASE_URL || '';
+    const isGithubPagesHost = /github\.io$/i.test(window.location.hostname);
+    const API_BASE_URL = configuredApiBaseUrl || (isGithubPagesHost ? 'https://adekanle-real-estate-website.onrender.com' : window.location.origin);
     const UPLOAD_ENDPOINT = `${API_BASE_URL}/api/properties`;
     const PROPERTIES_ENDPOINT = `${API_BASE_URL}/api/properties`;
     const ADMIN_UPDATE_ENDPOINT = `${API_BASE_URL}/api/admin/properties`;
@@ -24,6 +26,17 @@ document.addEventListener('DOMContentLoaded', function() {
         page: 1,
         limit: 12
     };
+    let apiAvailable = true;
+
+    function filterStaticCardsByCategory() {
+        if (!propertiesGrid) return;
+        const cards = propertiesGrid.querySelectorAll('.property-card');
+        cards.forEach((card) => {
+            const cardCategory = (card.getAttribute('data-category') || '').toLowerCase();
+            const shouldShow = activeFilters.category === 'all' || cardCategory === activeFilters.category;
+            card.style.display = shouldShow ? '' : 'none';
+        });
+    }
 
     function trackEvent(eventType, metadata = {}) {
         fetch(ANALYTICS_ENDPOINT, {
@@ -53,6 +66,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (className) element.className = className;
         if (textContent !== undefined && textContent !== null) element.textContent = textContent;
         return element;
+    }
+
+    function formatPrice(price) {
+        const value = String(price || '').trim();
+        if (!value) return 'Price on request';
+        if (value.includes('₦')) return value;
+        if (/^\$/.test(value)) return `₦${value.slice(1)}`;
+        if (/[€£¥]/.test(value)) return value;
+        return `₦${value}`;
     }
 
     function toPropertyDetailsUrl(property) {
@@ -93,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
         details.appendChild(features);
 
         const priceRow = createElement('div', 'property-price');
-        priceRow.appendChild(createElement('strong', '', property.price || 'Price on request'));
+        priceRow.appendChild(createElement('strong', '', formatPrice(property.price)));
 
         const viewLink = createElement('a', 'btn-view', 'View Details');
         viewLink.href = toPropertyDetailsUrl(property);
@@ -196,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const meta = createElement(
                 'p',
                 'admin-property-meta',
-                `${property.location || 'No location'} • ${property.price || 'No price'} • ${property.listingType || 'N/A'} • ${property.category || 'N/A'}`
+                `${property.location || 'No location'} • ${formatPrice(property.price)} • ${property.listingType || 'N/A'} • ${property.category || 'N/A'}`
             );
             const description = createElement('p', 'admin-property-meta', property.description || 'No description provided.');
             const actions = createElement('div', 'admin-property-actions');
@@ -299,7 +321,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const response = await fetch(`${PROPERTIES_ENDPOINT}?${params.toString()}`);
-            if (!response.ok) return;
+            if (!response.ok) {
+                apiAvailable = false;
+                filterStaticCardsByCategory();
+                return;
+            }
+            apiAvailable = true;
             const payload = await response.json();
             const items = Array.isArray(payload) ? payload : payload.data || [];
             renderProperties(items);
@@ -310,7 +337,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 paginationSummary.textContent = `Page ${page} of ${Math.max(totalPages, 1)} • ${total} result(s)`;
             }
         } catch (_error) {
-            // Keep static listings even if API is unavailable.
+            apiAvailable = false;
+            filterStaticCardsByCategory();
         }
     }
 
@@ -344,6 +372,10 @@ document.addEventListener('DOMContentLoaded', function() {
             activeFilters.category = this.getAttribute('data-filter') || 'all';
             activeFilters.page = 1;
             trackEvent('category_filter', { category: activeFilters.category });
+            if (!apiAvailable) {
+                filterStaticCardsByCategory();
+                return;
+            }
             loadPropertiesFromApi();
         });
     });

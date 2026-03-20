@@ -1,9 +1,20 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const API_BASE_URL = window.location.origin;
+    const configuredApiBaseUrl = document.querySelector('meta[name="api-base-url"]')?.content?.trim() || window.API_BASE_URL || '';
+    const isGithubPagesHost = /github\.io$/i.test(window.location.hostname);
+    const API_BASE_URL = configuredApiBaseUrl || (isGithubPagesHost ? 'https://adekanle-real-estate-website.onrender.com' : window.location.origin);
     const propertyId = new URLSearchParams(window.location.search).get('id');
     const detailContainer = document.getElementById('propertyDetail');
     const inquiryForm = document.getElementById('propertyInquiryForm');
     const inquiryStatus = document.getElementById('propertyInquiryStatus');
+
+    function formatPrice(price) {
+        const value = String(price || '').trim();
+        if (!value) return 'Price on request';
+        if (value.includes('₦')) return value;
+        if (/^\$/.test(value)) return `₦${value.slice(1)}`;
+        if (/[€£¥]/.test(value)) return value;
+        return `₦${value}`;
+    }
 
     function setInquiryStatus(message, type = '') {
         if (!inquiryStatus) return;
@@ -55,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span><i class="fas fa-bath"></i> ${property.baths || 0} Baths</span>
                         <span><i class="fas fa-ruler-combined"></i> ${property.size || 'N/A'} sqft</span>
                     </div>
-                    <div class="property-price"><strong>${property.price || 'Price on request'}</strong></div>
+                    <div class="property-price"><strong>${formatPrice(property.price)}</strong></div>
                     <p>Category: ${property.category || 'N/A'}</p>
                     <p>${property.description || 'No additional description provided.'}</p>
                 </div>
@@ -70,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 image: property.image,
                 offers: {
                     '@type': 'Offer',
-                    priceCurrency: 'USD',
+                    priceCurrency: 'NGN',
                     price: property.numericPrice || 0
                 }
             };
